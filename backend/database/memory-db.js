@@ -266,6 +266,7 @@ function initializeData() {
     teacherId: teacherId,
     classId: classId,
     questions: ['q1', 'q2', 'q3', 'q4', 'q5'],
+    status: 'pending',
     createdAt: twoDaysAgo,
     updatedAt: twoDaysAgo
   });
@@ -276,6 +277,7 @@ function initializeData() {
     teacherId: teacherId,
     classId: classId,
     questions: ['q1', 'q2', 'q3', 'q4', 'q5'],
+    status: 'pending',
     createdAt: yesterday,
     updatedAt: yesterday
   });
@@ -507,6 +509,7 @@ function initializeData() {
     teacherId: teacherId,
     classId: classId,
     questions: ['q6', 'q7', 'q8'],
+    status: 'pending',
     createdAt: twoDaysAgo,
     updatedAt: twoDaysAgo
   });

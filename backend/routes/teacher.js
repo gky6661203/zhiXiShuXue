@@ -435,7 +435,7 @@ router.post('/papers/upload', upload.single('file'), (req, res) => {
       fileName: originalName,
       fileSize: req.file.size,
       fileType: path.extname(originalName),
-      status: 'pending', // pending, processing, completed
+      status: 'pending', // pending, published
       questions: []
     });
 
@@ -660,12 +660,15 @@ router.post('/assignments', (req, res) => {
         fileName: '',
         fileSize: 0,
         fileType: 'manual',
-        status: 'completed',
+        status: 'published',
         questions: normalizedQuestionIds,
         source: 'question-bank'
       });
 
       effectivePaperId = generatedPaper.id;
+    } else {
+      // 更新现有试卷的状态为已发布
+      db.updateById('papers', effectivePaperId, { status: 'published' });
     }
 
     const assignment = db.create('assignments', {
