@@ -60,6 +60,21 @@
           <span>总分：{{ currentAnswer.answer && currentAnswer.answer.totalScore !== undefined ? currentAnswer.answer.totalScore : 0 }}</span>
         </div>
 
+        <!-- 显示学生上传的图片 -->
+        <div v-if="currentAnswer.answer && currentAnswer.answer.images && currentAnswer.answer.images.length > 0" class="answer-images">
+          <div class="images-title">学生上传的图片：</div>
+          <div class="images-grid">
+            <el-image
+              v-for="(image, index) in currentAnswer.answer.images"
+              :key="index"
+              :src="getImageUrl(image)"
+              fit="cover"
+              class="answer-image"
+              @click="previewImage(image)"
+            />
+          </div>
+        </div>
+
         <div v-for="(item, index) in currentAnswer.questionResults" :key="item.questionId" class="question-card">
           <div class="question-title">
             <strong>第{{ index + 1 }}题</strong>
@@ -232,6 +247,25 @@ function getTypeText(type) {
 function formatDate(date) {
   return date ? dayjs(date).format('YYYY-MM-DD HH:mm') : '-'
 }
+
+function getImageUrl(imagePath) {
+  if (!imagePath) return ''
+  if (/^https?:\/\//i.test(imagePath)) return imagePath
+
+  var origin = window.location.origin
+  if (origin.indexOf(':5000') !== -1) {
+    origin = origin.replace(':5000', ':5001')
+  }
+
+  return origin + imagePath
+}
+
+function previewImage(imagePath) {
+  var imageUrl = getImageUrl(imagePath)
+  if (imageUrl) {
+    window.open(imageUrl, '_blank')
+  }
+}
 </script>
 
 <style scoped>
@@ -286,5 +320,36 @@ function formatDate(date) {
 
 .question-comment {
   margin-top: 12px;
+}
+
+.answer-images {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.images-title {
+  font-weight: bold;
+  margin-bottom: 12px;
+  color: #303133;
+}
+
+.images-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.answer-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.answer-image:hover {
+  transform: scale(1.05);
 }
 </style>

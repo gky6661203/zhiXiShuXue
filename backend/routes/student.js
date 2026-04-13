@@ -1,7 +1,42 @@
 const express = require('express');
 const axios = require('axios');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const router = express.Router();
 const db = require('../database/memory-db');
+
+// 配置文件上传
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../uploads/answers');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const extname = path.extname(file.originalname);
+    cb(null, uniqueSuffix + extname);
+  }
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpg|jpeg|png/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error('不支持的文件格式'));
+    }
+  }
+});
 
 function getStudentByUserId(userId) {
   return db.findById('students', userId) || db.findOne('students', { userId });
@@ -616,6 +651,7 @@ router.get('/assignments', (req, res) => {
       return {
         ...assignment,
         paperTitle: paper ? paper.title : '题库组卷',
+        paperId: assignment.paperId,
         questionCount:
           paper && Array.isArray(paper.questions)
             ? paper.questions.length
@@ -740,7 +776,8 @@ router.get('/assignments/:id/questions', (req, res) => {
         assignment: {
           ...assignment,
           title: assignment.title || '作业',
-          paperTitle: paper ? paper.title : '题库组卷'
+          paperTitle: paper ? paper.title : '题库组卷',
+          paperId: assignment.paperId
         },
         questions
       }
@@ -1003,7 +1040,7 @@ router.post('/assignments/:id/submit', (req, res) => {
     const studentId = req.headers['x-user-id'];
     const student = getStudentByUserId(studentId);
     const { id } = req.params;
-    const { answers } = req.body;
+    const { answers, images } = req.body;
 
     if (!student) {
       return res.status(404).json({ success: false, message: '学生不存在' });
@@ -1031,7 +1068,8 @@ router.post('/assignments/:id/submit', (req, res) => {
       status: payload.hasSubjectiveQuestions ? 'submitted' : 'graded',
       submittedAt: new Date().toISOString(),
       recordType: 'homework',
-      knowledgePointScores: payload.knowledgePointScores
+      knowledgePointScores: payload.knowledgePointScores,
+      images: images || []
     });
 
     payload.questionResults.forEach(item => {
@@ -1134,6 +1172,29 @@ router.post('/wrong-questions/:id/note', (req, res) => {
   }
 });
 
+// 上传作业答案图片
+router.post('/answers/upload', upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: '请选择文件' });
+    }
+
+    const filePath = `/uploads/answers/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      data: {
+        filePath,
+        fileName: req.file.originalname,
+        fileSize: req.file.size
+      },
+      message: '文件上传成功'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // 学习聊天助手
 router.post('/chat', async (req, res) => {
   try {
@@ -1179,9 +1240,9 @@ router.post('/chat', async (req, res) => {
 
     const reply =
       response.data &&
-      response.data.choices &&
-      response.data.choices[0] &&
-      response.data.choices[0].message
+        response.data.choices &&
+        response.data.choices[0] &&
+        response.data.choices[0].message
         ? response.data.choices[0].message.content
         : '暂时没有获取到回复，请稍后重试。';
 
