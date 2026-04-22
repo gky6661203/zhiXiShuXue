@@ -5,6 +5,7 @@
 
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
+const { loadQuestionsFromStore, getAllQuestions, upsertQuestion, deleteQuestion: deleteQuestionFromStore } = require('./question-store');
 
 // 内存存储
 const db = {
@@ -18,7 +19,15 @@ const db = {
   answers: [],
   knowledgePoints: [],
   learningRecords: [],
+  studentQuestionAttempts: [], // 学生题目掌握记录
   masteredWrongQuestions: [],
+  student_answer: [],
+  student_knowledge_mastery: [],
+  mastery_snapshot: [],
+  student_mistake_0: [],
+  student_mistake_1: [],
+  student_mistake_2: [],
+  student_mistake_3: [],
   logs: [],
   settings: {}
 };
@@ -167,6 +176,7 @@ function initializeData() {
       score: 10,
       difficulty: 'easy',
       knowledgePoints: ['kp-001'],
+      knowledgePointId: 'kp-001',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     },
@@ -179,6 +189,7 @@ function initializeData() {
       score: 10,
       difficulty: 'easy',
       knowledgePoints: ['kp-002'],
+      knowledgePointId: 'kp-002',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     },
@@ -190,6 +201,7 @@ function initializeData() {
       score: 15,
       difficulty: 'medium',
       knowledgePoints: ['kp-005'],
+      knowledgePointId: 'kp-005',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     },
@@ -202,6 +214,7 @@ function initializeData() {
       score: 15,
       difficulty: 'medium',
       knowledgePoints: ['kp-007'],
+      knowledgePointId: 'kp-007',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     },
@@ -253,6 +266,37 @@ function initializeData() {
     }
   ]
   questions.forEach(q => db.questions.push(q))
+
+  db.questions = loadQuestionsFromStore(db.questions);
+
+  // 初始化学生答题记录
+  const studentId = 'student-001';
+  db.studentQuestionAttempts = [
+    {
+      studentId: studentId,
+      questionId: 'q1',
+      correctCount: 5,
+      attemptCount: 5,
+      lastResult: 'correct',
+      lastAnsweredAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      studentId: studentId,
+      questionId: 'q2',
+      correctCount: 1,
+      attemptCount: 4,
+      lastResult: 'wrong',
+      lastAnsweredAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString()
+    },
+    {
+      studentId: studentId,
+      questionId: 'q3',
+      correctCount: 0,
+      attemptCount: 3,
+      lastResult: 'wrong',
+      lastAnsweredAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    }
+  ];
 
   // 初始化模拟答题记录
   const now = new Date().toISOString()
@@ -613,6 +657,26 @@ class Database {
     this.data = db;
   }
 
+  reloadQuestionsFromStore() {
+    this.data.questions = getAllQuestions();
+    return this.data.questions;
+  }
+
+  persistCollection(collection, payload) {
+    if (collection !== 'questions') {
+      return;
+    }
+
+    if (payload && payload.type === 'delete') {
+      deleteQuestionFromStore(payload.id);
+      return;
+    }
+
+    if (payload && payload.item) {
+      upsertQuestion(payload.item);
+    }
+  }
+
   // 通用 CRUD 操作
   create(collection, item) {
     const newItem = {
@@ -622,6 +686,7 @@ class Database {
       updatedAt: new Date().toISOString()
     };
     this.data[collection].push(newItem);
+    this.persistCollection(collection, { item: newItem });
     return newItem;
   }
 
@@ -650,6 +715,7 @@ class Database {
       ...updates,
       updatedAt: new Date().toISOString()
     };
+    this.persistCollection(collection, { item: this.data[collection][index] });
     return this.data[collection][index];
   }
 
@@ -657,7 +723,9 @@ class Database {
     const index = this.data[collection].findIndex(item => item.id === id);
     if (index === -1) return false;
 
+    const removed = this.data[collection][index];
     this.data[collection].splice(index, 1);
+    this.persistCollection(collection, { type: 'delete', id: removed.id });
     return true;
   }
 
@@ -666,6 +734,9 @@ class Database {
     this.data[collection] = this.data[collection].filter(item => {
       return !Object.keys(query).every(key => item[key] === query[key]);
     });
+    if (initialLength != this.data[collection].length && collection === 'questions') {
+      this.data[collection].forEach(item => this.persistCollection(collection, { item }));
+    }
     return initialLength - this.data[collection].length;
   }
 
@@ -758,6 +829,45 @@ class Database {
 }
 
 // 初始化数据
+Database.prototype.getMistakeShardCollection = function(studentId) {
+  const digits = String(studentId || '').replace(/\D/g, '');
+  const num = digits ? parseInt(digits, 10) : 0;
+  return `student_mistake_${num % 4}`;
+};
+
+Database.prototype.getAllMistakesForStudent = function(studentId) {
+  return [0, 1, 2, 3]
+    .flatMap(index => this.data[`student_mistake_${index}`] || [])
+    .filter(item => item.studentId === studentId)
+    .sort((a, b) => new Date(b.lastPracticeTime || b.createdAt || 0) - new Date(a.lastPracticeTime || a.createdAt || 0));
+};
+
+Database.prototype.upsertStudentMistake = function(studentId, payload) {
+  const collection = this.getMistakeShardCollection(studentId);
+  const existing = (this.data[collection] || []).find(item => item.studentId === studentId && item.questionId === payload.questionId);
+  if (existing) {
+    return this.updateById(collection, existing.id, payload);
+  }
+  return this.create(collection, { studentId, ...payload });
+};
+
+Database.prototype.resolveStudentMistake = function(studentId, questionId) {
+  const collection = this.getMistakeShardCollection(studentId);
+  const existing = (this.data[collection] || []).find(item => item.studentId === studentId && item.questionId === questionId);
+  if (!existing) return null;
+
+  const currentStatus = String(existing.masteryStatus || '待强化');
+  let nextStatus = '已掌握';
+  if (currentStatus === '待强化') nextStatus = '待巩固';
+  else if (currentStatus === '待巩固' || currentStatus === '学习中') nextStatus = '已掌握';
+
+  return this.updateById(collection, existing.id, {
+    masteryStatus: nextStatus,
+    isResolved: nextStatus === '已掌握',
+    lastPracticeTime: new Date().toISOString()
+  });
+};
+
 initializeData();
 
 // 导出数据库实例

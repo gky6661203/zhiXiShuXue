@@ -74,6 +74,8 @@
     <div class="main-content">
       <router-view />
     </div>
+
+    <AiTutorWidget />
   </div>
 </template>
 
@@ -81,6 +83,7 @@
 import { computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import AiTutorWidget from '@/components/AiTutorWidget.vue'
 
 var router = useRouter()
 var route = useRoute()

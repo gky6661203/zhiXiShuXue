@@ -197,7 +197,7 @@ function loadData() {
           id: a.id,
           title: a.title,
           className: clsName,
-          submittedCount: a.submittedCount || 0,
+          submittedCount: a.answerCount !== undefined ? a.answerCount : (a.submittedCount || 0),
           status: a.status
         })
       }

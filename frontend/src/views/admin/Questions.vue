@@ -63,6 +63,14 @@
         <el-form-item label="内容" prop="content">
           <el-input v-model="form.content" type="textarea" :rows="3" />
         </el-form-item>
+        <el-form-item v-if="form.type === 'choice'" label="选项" prop="optionsText">
+          <el-input
+            v-model="form.optionsText"
+            type="textarea"
+            :rows="4"
+            placeholder="每行一个选项，例如：&#10;选项A&#10;选项B&#10;选项C&#10;选项D"
+          />
+        </el-form-item>
         <el-form-item label="答案" prop="answer">
           <el-input v-model="form.answer" />
         </el-form-item>
@@ -98,7 +106,7 @@ var isEdit = ref(false)
 var formRef = ref(null)
 var questions = ref([])
 
-var form = reactive({ id: '', type: 'choice', content: '', answer: '', score: 5, difficulty: 'medium' })
+var form = reactive({ id: '', type: 'choice', content: '', optionsText: '', answer: '', score: 5, difficulty: 'medium' })
 var rules = {
   type: [{ required: true, message: '请选择题型', trigger: 'change' }],
   content: [{ required: true, message: '请输入内容', trigger: 'blur' }],
@@ -130,6 +138,7 @@ function showAddDialog() {
   form.id = ''
   form.type = 'choice'
   form.content = ''
+  form.optionsText = ''
   form.answer = ''
   form.score = 5
   form.difficulty = 'medium'
@@ -141,6 +150,7 @@ function editQuestion(row) {
   form.id = row.id
   form.type = row.type
   form.content = row.content
+  form.optionsText = Array.isArray(row.options) ? row.options.join('\n') : ''
   form.answer = row.answer
   form.score = row.score
   form.difficulty = row.difficulty
@@ -167,11 +177,28 @@ function deleteQuestion(row) {
 function submitForm() {
   formRef.value.validate()
     .then(function() {
+      var payload = {
+        id: form.id,
+        type: form.type,
+        content: form.content,
+        answer: form.answer,
+        score: form.score,
+        difficulty: form.difficulty,
+        options: form.type === 'choice'
+          ? form.optionsText.split('\n').map(function(item) { return item.trim() }).filter(Boolean)
+          : []
+      }
+
+      if (payload.type === 'choice' && payload.options.length < 2) {
+        ElMessage.warning('选择题至少需要填写两个选项')
+        return
+      }
+
       var request
       if (isEdit.value) {
-        request = api.put('/admin/questions/' + form.id, form)
+        request = api.put('/admin/questions/' + form.id, payload)
       } else {
-        request = api.post('/admin/questions', form)
+        request = api.post('/admin/questions', payload)
       }
       
       request

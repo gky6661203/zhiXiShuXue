@@ -114,7 +114,7 @@ const routes = [
       {
         path: 'knowledge',
         name: 'StudentKnowledge',
-        component: function () { return import('@/views/student/Knowledge.vue') },
+        component: function () { return import('@/views/student/KnowledgeGraph.vue') },
         meta: { title: '知识图谱' }
       },
       {
@@ -126,7 +126,7 @@ const routes = [
       {
         path: 'practice',
         name: 'StudentPractice',
-        component: function () { return import('@/views/student/Practice.vue') },
+        component: function () { return import('@/views/student/WeakPractice.vue') },
         meta: { title: '薄弱补练' }
       },
       {
