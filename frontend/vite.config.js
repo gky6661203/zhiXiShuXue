@@ -8,7 +8,8 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
+      '@': path.resolve(__dirname, 'src'),
+      'three': path.resolve(__dirname, 'node_modules/three/build/three.module.js')
     }
   },
   server: {

@@ -1,6 +1,6 @@
 <template>
   <div class="practice-page" v-loading="loading">
-    <div class="page-header compact-header">
+    <div class="page-header compact-header page-shell">
       <div>
         <h2>{{ practiceMeta.mode === 'wrong-question' ? '错题重做' : '个性化补练' }}</h2>
         <p>{{ pageDesc }}</p>
