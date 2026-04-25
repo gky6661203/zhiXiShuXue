@@ -263,6 +263,26 @@ body {
   margin-top: 8px;
 }
 
+/* 登录页面提示 */
+.login-tips {
+  margin-top: 30px;
+  text-align: center;
+}
+
+.login-tips .el-divider {
+  margin-bottom: 20px;
+}
+
+.login-tips .account-list {
+  margin-bottom: 20px;
+}
+
+.login-tips .tip-text {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 0;
+}
+
 /* 响应式 */
 @media (max-width: 768px) {
   .sidebar {
@@ -275,5 +295,10 @@ body {
   
   .main-content {
     padding: 10px;
+  }
+  
+  .login-box {
+    width: 90%;
+    padding: 30px;
   }
 }
