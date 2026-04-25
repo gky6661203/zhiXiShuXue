@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const db = require('../database/memory-db');
+const { recordQuestionResults } = require('../services/math-bank');
 
 function normalizeUploadedFileName(fileName) {
   if (!fileName) return '';
@@ -90,7 +91,7 @@ function buildAnswerDetail(answer) {
     db.findById('students', answer.studentId) ||
     db.findOne('students', { userId: answer.studentId });
 
-  const questionResults = (answer.questionResults || []).map((item) => {
+  const baseQuestionResults = (answer.questionResults || []).map((item) => {
     const question = db.findById('questions', item.questionId) || {};
     const manualScore =
       answer.scores && answer.scores[item.questionId] !== undefined
@@ -104,6 +105,7 @@ function buildAnswerDetail(answer) {
     const studentAnswerInfo = isChoice
       ? normalizeChoiceDisplay(question, item.answer)
       : null;
+    const requiresManualReview = Array.isArray(answer.images) && answer.images.length > 0;
 
     return {
       questionId: item.questionId,
@@ -123,7 +125,7 @@ function buildAnswerDetail(answer) {
       studentAnswerLabel: isChoice ? studentAnswerInfo.label : '',
       studentAnswerContent: isChoice ? studentAnswerInfo.content : '',
 
-      correct: item.correct,
+      correct: requiresManualReview ? false : item.correct,
       score: manualScore || 0,
       fullScore: question.score || 0,
       knowledgePoints: question.knowledgePoints || [],
@@ -137,6 +139,46 @@ function buildAnswerDetail(answer) {
           : ''
     };
   });
+
+  const questionResults = baseQuestionResults.length > 0
+    ? baseQuestionResults
+    : Array.isArray(answer.images) && answer.images.length > 0
+      ? [{
+          questionId: '__image_review__',
+          questionType: 'imageUpload',
+          content: '学生上传图片作答，请教师根据图片内容进行整体批改。',
+          options: [],
+          standardAnswer: '见学生上传图片',
+          studentAnswer: `${answer.images.length} 张作答图片`,
+          standardAnswerRaw: '',
+          studentAnswerRaw: '',
+          standardAnswerLabel: '',
+          standardAnswerContent: '',
+          studentAnswerLabel: '',
+          studentAnswerContent: '',
+          correct: false,
+          score:
+            answer.scores && answer.scores.__image_review__ !== undefined
+              ? Number(answer.scores.__image_review__) || 0
+              : Number(answer.totalScore) || 0,
+          fullScore:
+            paper && Array.isArray(paper.questions) && paper.questions.length > 0
+              ? paper.questions.reduce((sum, questionId) => {
+                  const question = db.findById('questions', questionId);
+                  return sum + (question && question.score ? question.score : 0);
+                }, 0)
+              : 100,
+          knowledgePoints: [],
+          comment:
+            answer.comments && answer.comments.__image_review__
+              ? answer.comments.__image_review__
+              : '',
+          correction:
+            answer.corrections && answer.corrections.__image_review__
+              ? answer.corrections.__image_review__
+              : ''
+        }]
+      : [];
 
   return {
     answer: {
@@ -275,6 +317,12 @@ router.put('/classes/:id', (req, res) => {
     if (!updated) {
       return res.status(404).json({ success: false, message: '班级不存在' });
     }
+
+    recordQuestionResults(answer.studentId, nextQuestionResults, {
+      answeredAt: updated.gradedAt || new Date().toISOString(),
+      source: 'teacher-grade',
+      skipTypes: ['shortAnswer', 'imageUpload']
+    });
 
     res.json({ success: true, data: updated, message: '班级更新成功' });
   } catch (error) {
@@ -747,7 +795,8 @@ router.get('/assignments', (req, res) => {
         ...assignment,
         paperTitle: paper ? paper.title : '',
         className: classInfo ? classInfo.name : '',
-        answerCount
+        answerCount,
+        submittedCount: answerCount
       };
     });
 
@@ -887,19 +936,32 @@ router.post('/answers/:id/grade', (req, res) => {
       return res.status(404).json({ success: false, message: '答题记录不存在' });
     }
 
-    const nextQuestionResults = (answer.questionResults || []).map(item => {
-      const manualScore = scores && scores[item.questionId] !== undefined ? Number(scores[item.questionId]) : item.score;
-      const question = db.findById('questions', item.questionId);
-      const fullScore = question && question.score ? question.score : 0;
-      const isObjective = question && (question.type === 'choice' || question.type === 'fill');
+    const currentQuestionResults = Array.isArray(answer.questionResults) ? answer.questionResults : [];
+    const hasImageOnlySubmission = currentQuestionResults.length === 0 && Array.isArray(answer.images) && answer.images.length > 0;
 
-      return {
-        ...item,
-        score: Math.max(0, Math.min(fullScore, manualScore || 0)),
-        correct: isObjective ? item.correct : (manualScore || 0) >= fullScore * 0.6,
-        correction: corrections && corrections[item.questionId] ? corrections[item.questionId] : ''
-      };
-    });
+    const nextQuestionResults = hasImageOnlySubmission
+      ? [{
+          questionId: '__image_review__',
+          answer: `${answer.images.length} 张作答图片`,
+          score: Math.max(0, Number(scores && scores.__image_review__) || 0),
+          correct: (Number(scores && scores.__image_review__) || 0) > 0,
+          comment: comments && comments.__image_review__ ? comments.__image_review__ : '',
+          correction: corrections && corrections.__image_review__ ? corrections.__image_review__ : ''
+        }]
+      : currentQuestionResults.map(item => {
+          const manualScore = scores && scores[item.questionId] !== undefined ? Number(scores[item.questionId]) : item.score;
+          const question = db.findById('questions', item.questionId);
+          const fullScore = question && question.score ? question.score : 0;
+          const isObjective = question && (question.type === 'choice' || question.type === 'fill');
+
+          return {
+            ...item,
+            score: Math.max(0, Math.min(fullScore, manualScore || 0)),
+            correct: isObjective ? item.correct : (manualScore || 0) >= fullScore * 0.6,
+            comment: comments && comments[item.questionId] ? comments[item.questionId] : '',
+            correction: corrections && corrections[item.questionId] ? corrections[item.questionId] : ''
+          };
+        });
 
     const totalScore = nextQuestionResults.reduce((sum, item) => sum + (item.score || 0), 0);
 
@@ -912,6 +974,12 @@ router.post('/answers/:id/grade', (req, res) => {
       gradedBy: teacherId,
       gradedAt: new Date().toISOString(),
       status: 'graded'
+    });
+
+    recordQuestionResults(answer.studentId, nextQuestionResults, {
+      answeredAt: updated.gradedAt || new Date().toISOString(),
+      source: 'teacher-grade',
+      skipTypes: ['shortAnswer', 'imageUpload']
     });
 
     res.json({ success: true, data: updated, message: '批改成功' });

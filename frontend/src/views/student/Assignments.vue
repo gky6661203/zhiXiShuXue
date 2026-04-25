@@ -48,7 +48,7 @@
               {{ scope.row.submitted ? '查看结果' : '开始答题' }}
             </el-button>
             <el-button
-              v-if="scope.row.paperTitle"
+              v-if="scope.row.hasPdfPaper && scope.row.paperFilePath"
               type="info"
               size="small"
               @click="viewPaper(scope.row)"
@@ -118,10 +118,8 @@ function getFilePreviewUrl(filePath) {
 }
 
 function viewPaper(row) {
-  if (!row.paperId) return
-  // 直接访问后端文件路径，与教师端一致
-  var filePath = '/uploads/papers/' + row.paperId + '.pdf'
-  var url = getFilePreviewUrl(filePath)
+  if (!row || !row.paperFilePath || !row.hasPdfPaper) return
+  var url = getFilePreviewUrl(row.paperFilePath)
   window.open(url, '_blank')
 }
 </script>

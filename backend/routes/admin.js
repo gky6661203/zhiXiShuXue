@@ -4,6 +4,8 @@ const multer = require('multer');
 const XLSX = require('xlsx');
 const bcrypt = require('bcryptjs');
 const db = require('../database/memory-db');
+const { ensureManualQuestionBank, getQuestionBankByNode } = require('../services/manual-question-bank');
+const { buildAdminSettingsPayload, getAdminSettingsView, validateRemoteConfig } = require('../services/ai-tutor');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -42,7 +44,7 @@ function buildImportSummary(classes, students, users) {
 // 获取系统配置
 router.get('/settings', (req, res) => {
   try {
-    res.json({ success: true, data: db.data.settings });
+    res.json({ success: true, data: { ...db.data.settings, ...getAdminSettingsView() } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -208,16 +210,26 @@ router.post('/questions', (req, res) => {
   try {
     const userId = req.headers['x-user-id'];
     const { type, content, options, answer, knowledgePoints, difficulty, score } = req.body;
+    const normalizedOptions = Array.isArray(options)
+      ? options.map(item => String(item || '').trim()).filter(Boolean)
+      : [];
+    const normalizedAnswer = String(answer || '').trim();
     
     if (!type || !content) {
       return res.status(400).json({ success: false, message: '题目类型和内容不能为空' });
+    }
+    if (!normalizedAnswer) {
+      return res.status(400).json({ success: false, message: '答案不能为空' });
+    }
+    if (type === 'choice' && normalizedOptions.length < 2) {
+      return res.status(400).json({ success: false, message: '选择题至少需要两个选项' });
     }
     
     const question = db.create('questions', {
       type,
       content,
-      options: options || [],
-      answer,
+      options: normalizedOptions,
+      answer: normalizedAnswer,
       knowledgePoints: knowledgePoints || [],
       difficulty: difficulty || 'medium',
       score: score || 1,
@@ -237,9 +249,25 @@ router.put('/questions/:id', (req, res) => {
   try {
     const { id } = req.params;
     const { content, options, answer, knowledgePoints, difficulty, score } = req.body;
+    const normalizedOptions = Array.isArray(options)
+      ? options.map(item => String(item || '').trim()).filter(Boolean)
+      : [];
+    const normalizedAnswer = String(answer || '').trim();
+
+    if (!normalizedAnswer) {
+      return res.status(400).json({ success: false, message: '答案不能为空' });
+    }
+    if (normalizedOptions.length > 0 && normalizedOptions.length < 2) {
+      return res.status(400).json({ success: false, message: '选择题至少需要两个选项' });
+    }
     
     const updated = db.updateById('questions', id, {
-      content, options, answer, knowledgePoints, difficulty, score
+      content,
+      options: normalizedOptions,
+      answer: normalizedAnswer,
+      knowledgePoints,
+      difficulty,
+      score
     });
     
     if (!updated) {

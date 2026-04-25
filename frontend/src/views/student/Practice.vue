@@ -1,6 +1,6 @@
 <template>
   <div class="practice-page" v-loading="loading">
-    <div class="page-header compact-header">
+    <div class="page-header compact-header page-shell">
       <div>
         <h2>{{ practiceMeta.mode === 'wrong-question' ? '错题重做' : '个性化补练' }}</h2>
         <p>{{ pageDesc }}</p>
@@ -55,28 +55,46 @@
             <div class="section-header">
               <div>
                 <div class="section-title">薄弱板块总览</div>
-                <div class="section-desc">选择一个知识点，进入专项补练。</div>
+                <div class="section-desc">按五大类展开薄弱补练任务，点击知识点进入专项补练。</div>
               </div>
               <el-tag type="info">{{ relatedKnowledgePoints.length }} 个知识点</el-tag>
             </div>
           </template>
 
-          <div class="overview-list">
-            <div v-for="item in relatedKnowledgePoints" :key="item.id" class="overview-item">
-              <div class="overview-item-main">
-                <div class="overview-item-name-row">
-                  <span class="overview-item-name">{{ item.name }}</span>
+          <div class="overview-category-list">
+            <div v-for="group in groupedPracticeOverview" :key="group.name" class="overview-category-item">
+              <div class="overview-category-head" @click="toggleOverviewCategory(group.name)">
+                <div>
+                  <div class="section-title">{{ group.name }}</div>
+                  <div class="section-desc">{{ group.summary }}</div>
                 </div>
-                <div v-if="item.description" class="overview-item-desc">{{ item.description }}</div>
-                <div class="overview-item-meta">
-                  <span>掌握度 {{ item.masteryRate }}%</span>
-                  <span>错误 {{ item.wrongCount }}</span>
-                  <span>练习题 {{ item.questionCount }}</span>
+                <div class="overview-category-head-right">
+                  <el-tag :type="group.tagType">{{ group.items.length }} 项</el-tag>
+                  <span class="overview-category-toggle">{{ isOverviewCategoryExpanded(group.name) ? '收起' : '展开' }}</span>
                 </div>
               </div>
-              <el-button type="primary" plain @click="openKnowledgePointPractice(item)">
-                开始补练
-              </el-button>
+
+              <div v-show="isOverviewCategoryExpanded(group.name)" class="overview-category-content">
+                <div v-if="group.items.length" class="overview-list">
+                  <div v-for="item in group.items" :key="item.id" class="overview-item">
+                    <div class="overview-item-main">
+                      <div class="overview-item-name-row">
+                        <span class="overview-item-name">{{ item.name }}</span>
+                      </div>
+                      <div v-if="item.description" class="overview-item-desc">{{ item.description }}</div>
+                      <div class="overview-item-meta">
+                        <span>掌握度 {{ item.masteryRate }}%</span>
+                        <span>错误 {{ item.wrongCount }}</span>
+                        <span>练习题 {{ item.questionCount }}</span>
+                      </div>
+                    </div>
+                    <el-button type="primary" plain @click="openKnowledgePointPractice(item)">
+                      开始补练
+                    </el-button>
+                  </div>
+                </div>
+                <el-empty v-else description="当前分类暂无待补练知识点" />
+              </div>
             </div>
           </div>
         </el-card>
@@ -93,58 +111,111 @@
           </template>
 
           <div v-if="questions.length" class="question-list">
-            <div v-for="(question, index) in questions" :key="question.id" class="question-item">
-              <div class="question-header">
-                <div class="question-title-row">
-                  <span class="question-index">第 {{ index + 1 }} 题</span>
-                  <el-tag size="small" effect="plain">{{ getQuestionTypeLabel(question.type) }}</el-tag>
-                  <el-tag size="small" effect="plain">{{ getDifficultyLabel(question.difficulty) }}</el-tag>
-                  <el-tag v-if="practiceMeta.mode === 'wrong-question'" size="small" type="danger">
-                    错题重做
-                  </el-tag>
+            <template v-if="practiceMeta.mode === 'personalized-recommendation'">
+              <div v-for="group in practiceMeta.groups" :key="group.knowledgePointId" class="kp-practice-group">
+                <!-- 知识卡片 -->
+                <div class="knowledge-card">
+                  <div class="card-header">
+                    <el-icon><Reading /></el-icon>
+                    <span class="kp-name">{{ group.knowledgePointName }} · 知识卡片</span>
+                    <el-tag size="small" type="danger" effect="dark">掌握度 {{ group.masteryRate }}%</el-tag>
+                  </div>
+                  <div class="card-body">
+                    <div class="card-row">
+                      <span class="row-label">核心概念:</span>
+                      <span class="row-content">{{ group.knowledgeCard.concept }}</span>
+                    </div>
+                    <div class="card-row">
+                      <span class="row-label">重要公式:</span>
+                      <span class="row-content">{{ group.knowledgeCard.formula }}</span>
+                    </div>
+                    <div class="card-row warning">
+                      <span class="row-label">易错警示:</span>
+                      <span class="row-content">{{ group.knowledgeCard.warning }}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 题目列表 -->
+                <div v-for="(question, qIndex) in group.questions" :key="question.id" class="question-item">
+                  <div class="question-header">
+                    <div class="question-title-row">
+                      <span class="question-index">第 {{ qIndex + 1 }} 题 ({{ group.knowledgePointName }})</span>
+                      <el-tag size="small" effect="plain">{{ getQuestionTypeLabel(question.type) }}</el-tag>
+                      <el-tag size="small" effect="plain">{{ getDifficultyLabel(question.difficulty) }}</el-tag>
+                    </div>
+                  </div>
+                  <div class="question-content">{{ question.content }}</div>
+                  <div v-if="question.options && question.options.length" class="option-list">
+                    <div v-for="(option, optionIndex) in question.options" :key="optionIndex" class="option-item">
+                      {{ String.fromCharCode(65 + optionIndex) }}. {{ option }}
+                    </div>
+                  </div>
+                  <el-input
+                    v-model="answers[question.id]"
+                    type="textarea"
+                    :rows="question.type === 'shortAnswer' ? 4 : 2"
+                    placeholder="请输入你的答案"
+                    class="question-answer"
+                  />
                 </div>
               </div>
+            </template>
 
-              <div class="question-content">{{ question.content }}</div>
+            <template v-else>
+              <div v-for="(question, index) in questions" :key="question.id" class="question-item">
+                <div class="question-header">
+                  <div class="question-title-row">
+                    <span class="question-index">第 {{ index + 1 }} 题</span>
+                    <el-tag size="small" effect="plain">{{ getQuestionTypeLabel(question.type) }}</el-tag>
+                    <el-tag size="small" effect="plain">{{ getDifficultyLabel(question.difficulty) }}</el-tag>
+                    <el-tag v-if="practiceMeta.mode === 'wrong-question'" size="small" type="danger">
+                      错题重做
+                    </el-tag>
+                  </div>
+                </div>
 
-              <div v-if="question.options && question.options.length" class="option-list">
+                <div class="question-content">{{ question.content }}</div>
+
+                <div v-if="question.options && question.options.length" class="option-list">
+                  <div
+                    v-for="(option, optionIndex) in question.options"
+                    :key="optionIndex"
+                    class="option-item"
+                  >
+                    {{ String.fromCharCode(65 + optionIndex) }}. {{ option }}
+                  </div>
+                </div>
+
+                <el-input
+                  v-model="answers[question.id]"
+                  type="textarea"
+                  :rows="question.type === 'shortAnswer' ? 4 : 2"
+                  :placeholder="
+                    practiceMeta.mode === 'wrong-question'
+                      ? '请输入这道错题的重做答案'
+                      : '请输入你的答案'
+                  "
+                  class="question-answer"
+                />
+
                 <div
-                  v-for="(option, optionIndex) in question.options"
-                  :key="optionIndex"
-                  class="option-item"
+                  v-if="questionFeedbackMap[question.id]"
+                  :class="[
+                    'question-feedback',
+                    questionFeedbackMap[question.id].correct ? 'is-correct' : 'is-wrong'
+                  ]"
                 >
-                  {{ String.fromCharCode(65 + optionIndex) }}. {{ option }}
+                  <div class="feedback-title">
+                    {{ questionFeedbackMap[question.id].correct ? '回答正确' : '回答有误' }}
+                  </div>
+                  <div>正确答案：{{ questionFeedbackMap[question.id].answer || '-' }}</div>
+                  <div v-if="questionFeedbackMap[question.id].analysis">
+                    解析：{{ questionFeedbackMap[question.id].analysis }}
+                  </div>
                 </div>
               </div>
-
-              <el-input
-                v-model="answers[question.id]"
-                type="textarea"
-                :rows="question.type === 'shortAnswer' ? 4 : 2"
-                :placeholder="
-                  practiceMeta.mode === 'wrong-question'
-                    ? '请输入这道错题的重做答案'
-                    : '请输入你的答案'
-                "
-                class="question-answer"
-              />
-
-              <div
-                v-if="questionFeedbackMap[question.id]"
-                :class="[
-                  'question-feedback',
-                  questionFeedbackMap[question.id].correct ? 'is-correct' : 'is-wrong'
-                ]"
-              >
-                <div class="feedback-title">
-                  {{ questionFeedbackMap[question.id].correct ? '回答正确' : '回答有误' }}
-                </div>
-                <div>正确答案：{{ questionFeedbackMap[question.id].answer || '-' }}</div>
-                <div v-if="questionFeedbackMap[question.id].analysis">
-                  解析：{{ questionFeedbackMap[question.id].analysis }}
-                </div>
-              </div>
-            </div>
+            </template>
           </div>
 
           <el-empty v-else-if="!loading" description="当前没有可作答题目" />
@@ -161,6 +232,19 @@
             </div>
           </div>
         </el-card>
+
+        <el-dialog v-model="answerDialogVisible" title="本次作答答案反馈" width="680px">
+          <div class="answer-dialog-list">
+            <div v-for="item in answerDialogItems" :key="item.id" class="answer-dialog-item">
+              <div class="answer-dialog-title">{{ item.title }}</div>
+              <div class="answer-dialog-meta">你的答案：{{ item.studentAnswer || '-' }}</div>
+              <div class="answer-dialog-meta">正确答案：{{ item.correctAnswer || '-' }}</div>
+            </div>
+          </div>
+          <template #footer>
+            <el-button type="primary" @click="answerDialogVisible = false">我知道了</el-button>
+          </template>
+        </el-dialog>
 
         <el-card v-if="resultVisible" class="result-card gradient-card">
           <template #header>
@@ -190,6 +274,27 @@
             </div>
           </div>
 
+          <div v-if="resultData.report" class="result-report-section">
+            <div class="section-title-sm">补练报告</div>
+            <div class="report-content">{{ resultData.report }}</div>
+          </div>
+
+          <div v-if="resultData.masteryComparison.length" class="result-chart-section">
+            <div class="section-title-sm">掌握度变化对比</div>
+            <div id="masteryChart" style="height: 300px; margin-top: 10px;"></div>
+          </div>
+
+          <div v-if="resultData.ebbinghaus.length" class="result-ebbinghaus-section">
+            <div class="section-title-sm">艾宾浩斯复习计划</div>
+            <div class="ebbinghaus-list">
+              <div v-for="plan in resultData.ebbinghaus" :key="plan.day" class="ebbinghaus-item">
+                <el-icon><Calendar /></el-icon>
+                <span class="plan-label">{{ plan.label }}</span>
+                <span class="plan-date">{{ plan.date }}</span>
+              </div>
+            </div>
+          </div>
+
           <div v-if="resultData.knowledgePointChanges.length" class="result-kp-list">
             <div
               v-for="item in resultData.knowledgePointChanges"
@@ -204,8 +309,11 @@
                 <div class="result-kp-meta">
                   题目 {{ item.questionCount }} · 正确 {{ item.correctCount }} · 错误 {{ item.wrongCount }}
                 </div>
+                <div class="result-kp-meta">
+                  掌握度 {{ item.masteryBefore ?? item.masteryAfter }}% → {{ item.masteryAfter }}%
+                </div>
               </div>
-              <div class="result-kp-rate">掌握度 {{ item.masteryAfter }}%</div>
+              <div class="result-kp-rate">当前掌握 {{ item.masteryAfter }}%</div>
             </div>
           </div>
         </el-card>
@@ -261,7 +369,7 @@
                 ></div>
               </div>
               <div class="progress-meta">
-                正确 {{ item.correctCount }} / {{ item.questionCount }}
+                掌握度 {{ item.masteryBefore ?? item.masteryAfter }}% → {{ item.masteryAfter }}%
               </div>
             </div>
           </div>
@@ -286,10 +394,13 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Reading, Calendar } from '@element-plus/icons-vue'
 import api from '@/utils/api'
+import { MAJOR_CATEGORY_CONFIG, getMasteryStatus, inferMajorCategory } from '@/utils/knowledge-meta'
+import * as echarts from 'echarts'
 
 const route = useRoute()
 const router = useRouter()
@@ -309,12 +420,18 @@ const practiceMeta = reactive({
 })
 
 const resultVisible = ref(false)
+const answerDialogVisible = ref(false)
+const answerDialogItems = ref([])
+const overviewCategoryExpandedMap = ref({})
 const resultData = reactive({
   totalScore: 0,
   questionResults: [],
   knowledgePointChanges: [],
   status: '',
-  allCorrect: false
+  allCorrect: false,
+  report: '',
+  ebbinghaus: [],
+  masteryComparison: []
 })
 
 const relatedKnowledgePoints = computed(() => {
@@ -356,7 +473,27 @@ const relatedKnowledgePoints = computed(() => {
   return Object.values(map)
 })
 
-const showOverview = computed(() => !route.query.kpId && !route.query.questionId)
+const groupedPracticeOverview = computed(() => {
+  return MAJOR_CATEGORY_CONFIG.map((config) => {
+    const items = relatedKnowledgePoints.value
+      .filter((item) => getCategoryName(item) === config.name)
+      .sort((a, b) => (a.masteryRate || 0) - (b.masteryRate || 0))
+
+    const weakCount = items.filter((item) => getMasteryStatus(item.masteryRate) === 'weak').length
+    const summary = items.length
+      ? (weakCount ? `当前有 ${weakCount} 个知识点需要优先补练。` : '当前主要是稳定性巩固。')
+      : '当前分类整体稳定。'
+
+    return {
+      name: config.name,
+      items,
+      summary,
+      tagType: weakCount ? 'danger' : items.length ? 'warning' : 'success'
+    }
+  })
+})
+
+const showOverview = computed(() => false)
 
 const pageDesc = computed(() => {
   return practiceMeta.mode === 'wrong-question'
@@ -390,12 +527,75 @@ const latestCorrectCount = computed(() => {
   return list.filter(item => item.correct).length
 })
 
+let masteryChart = null
+
+function renderMasteryChart() {
+  const chartDom = document.getElementById('masteryChart')
+  if (!chartDom) return
+  if (masteryChart) masteryChart.dispose()
+  masteryChart = echarts.init(chartDom)
+
+  const data = resultData.masteryComparison
+  const xData = data.map(item => item.name)
+  const beforeData = data.map(item => item.before)
+  const afterData = data.map(item => item.after)
+
+  masteryChart.setOption({
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'shadow' }
+    },
+    legend: {
+      data: ['练习前掌握度', '练习后掌握度'],
+      bottom: 0
+    },
+    grid: {
+      top: 30,
+      left: '3%',
+      right: '4%',
+      bottom: 40,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'value',
+      min: 0,
+      max: 100,
+      axisLabel: { formatter: '{value}%' }
+    },
+    yAxis: {
+      type: 'category',
+      data: xData,
+      axisLabel: {
+        width: 100,
+        overflow: 'truncate'
+      }
+    },
+    series: [
+      {
+        name: '练习前掌握度',
+        type: 'bar',
+        data: beforeData,
+        itemStyle: { color: '#94a3b8' }
+      },
+      {
+        name: '练习后掌握度',
+        type: 'bar',
+        data: afterData,
+        itemStyle: { color: '#2563eb' }
+      }
+    ]
+  })
+}
+
 onMounted(() => {
   syncPracticeByRoute()
+  window.addEventListener('resize', () => {
+    masteryChart?.resize()
+  })
 })
 
 watch(
-  () => [route.query.kpId, route.query.questionId],
+  () => [route.query.kpId, route.query.questionId, route.query.questionIds, route.query.mode],
   () => {
     syncPracticeByRoute()
   }
@@ -404,8 +604,12 @@ watch(
 function syncPracticeByRoute() {
   const kpId = route.query.kpId
   const questionId = route.query.questionId
+  const questionIds = route.query.questionIds
+  const mode = route.query.mode
 
-  if (questionId) {
+  if (mode === 'wrong-redo' && questionIds) {
+    loadPractice('custom', null, questionIds, mode)
+  } else if (questionId) {
     loadPractice(kpId || 'custom', questionId)
   } else if (kpId) {
     loadPractice(kpId)
@@ -442,44 +646,87 @@ function resetState() {
 function loadWeakPointOverview() {
   resetState()
   loading.value = true
-  practiceMeta.title = '薄弱知识板块总览'
+  practiceMeta.title = '薄弱补练推荐'
+  practiceMeta.mode = 'personalized-recommendation'
 
-  api.get('/student/weak-points')
+  api.get('/student/personalized-recommendations', { all: true })
     .then((res) => {
       if (res.success) {
-        const list = res.data || []
+        const list = res.data.questions || []
+        
+        // 分组题目
+        const grouped = {}
+        list.forEach(q => {
+          const kpName = q.knowledgePointName || '其他'
+          if (!grouped[kpName]) {
+            grouped[kpName] = {
+              name: kpName,
+              reason: q.recommendationReason,
+              questions: []
+            }
+          }
+          grouped[kpName].questions.push(q)
+        })
+        
+        practiceMeta.groupedRecommendations = Object.values(grouped)
+        questions.value = list
+        
         practiceMeta.chatPractice = {
           openingMessage: list.length
-            ? '选择一个薄弱知识点，直接开始专项补练。'
-            : '当前还没有检测到需要补练的薄弱知识点，继续保持。',
+            ? '以下是为你量身定制的补练题目，请认真完成。'
+            : '当前没有需要补练的题目，继续保持。',
           knowledgePoint: null,
-          relatedKnowledgePoints: list.map((item) => ({
-            id: item.id,
-            name: item.name,
-            description: item.description || '',
-            masteryRate: item.masteryRate,
-            wrongCount: item.wrongCount || 0,
-            questionCount: item.practiceCount || 0
-          }))
+          relatedKnowledgePoints: []
         }
       }
     })
     .catch((error) => {
-      console.error('加载薄弱点总览失败:', error)
-      ElMessage.error('加载薄弱点总览失败')
+      console.error('加载失败:', error)
+      ElMessage.error('加载推荐失败')
     })
     .finally(() => {
       loading.value = false
     })
 }
 
-function loadPractice(kpId, questionId) {
+function getCategoryName(item) {
+  return inferMajorCategory(item, '数与式')
+}
+
+function ensureOverviewExpandedState() {
+  const nextMap = { ...overviewCategoryExpandedMap.value }
+  let hasExpanded = false
+  groupedPracticeOverview.value.forEach((group) => {
+    if (typeof nextMap[group.name] !== 'boolean') nextMap[group.name] = false
+    if (nextMap[group.name]) hasExpanded = true
+  })
+  if (!hasExpanded) {
+    const firstGroup = groupedPracticeOverview.value.find(group => group.items.length)
+    if (firstGroup) nextMap[firstGroup.name] = true
+  }
+  overviewCategoryExpandedMap.value = nextMap
+}
+
+function toggleOverviewCategory(name) {
+  overviewCategoryExpandedMap.value[name] = !overviewCategoryExpandedMap.value[name]
+}
+
+function isOverviewCategoryExpanded(name) {
+  return !!overviewCategoryExpandedMap.value[name]
+}
+
+function loadPractice(kpId, questionId, questionIds, mode) {
   resetState()
   loading.value = true
 
   let url = `/student/practice/${kpId}`
-  if (questionId) {
-    url += `?questionId=${questionId}`
+  const params = []
+  if (questionId) params.push(`questionId=${questionId}`)
+  if (questionIds) params.push(`questionIds=${questionIds}`)
+  if (mode) params.push(`mode=${mode}`)
+  
+  if (params.length) {
+    url += `?${params.join('&')}`
   }
 
   api.get(url)
@@ -504,7 +751,7 @@ function loadPractice(kpId, questionId) {
 
 function openKnowledgePointPractice(item) {
   if (!item || !item.id) return
-  router.push({ path: '/student/practice', query: { kpId: item.id } })
+  router.push({ path: '/student/practice', query: { kpId: item.id, parentId: item.parentId || '' } })
 }
 
 function buildQuestionAnalysis(question, isCorrect) {
@@ -528,6 +775,48 @@ function resetAnswers() {
     delete questionFeedbackMap[key]
   })
   resultVisible.value = false
+}
+
+function syncMasteryMetaAfterSubmit(changes = []) {
+  if (!practiceMeta.chatPractice || !Array.isArray(practiceMeta.chatPractice.relatedKnowledgePoints)) return
+
+  const changeMap = changes.reduce((acc, item) => {
+    acc[item.knowledgePointId] = item
+    return acc
+  }, {})
+
+  practiceMeta.chatPractice.relatedKnowledgePoints = practiceMeta.chatPractice.relatedKnowledgePoints.map((item) => {
+    const change = changeMap[item.id]
+    if (!change) return item
+    return {
+      ...item,
+      masteryRate: change.masteryAfter,
+      wrongCount: change.wrongCount
+    }
+  })
+
+  if (practiceMeta.chatPractice.knowledgePoint) {
+    const currentChange = changeMap[practiceMeta.chatPractice.knowledgePoint.id]
+    if (currentChange) {
+      practiceMeta.chatPractice.knowledgePoint = {
+        ...practiceMeta.chatPractice.knowledgePoint,
+        masteryRate: currentChange.masteryAfter
+      }
+    }
+  }
+}
+
+function openAnswerDialog(questionList, resultList) {
+  answerDialogItems.value = questionList.map((question, index) => {
+    const result = resultList.find(item => item.questionId === question.id) || {}
+    return {
+      id: question.id || index,
+      title: `第 ${index + 1} 题`,
+      studentAnswer: result.answer || answers[question.id] || '-',
+      correctAnswer: result.correctAnswer || question.answerDisplay || question.answer || '-'
+    }
+  })
+  answerDialogVisible.value = answerDialogItems.value.length > 0
 }
 
 function submitPractice() {
@@ -564,6 +853,15 @@ function submitPractice() {
         resultData.knowledgePointChanges = Array.isArray(data.knowledgePointChanges) ? data.knowledgePointChanges : []
         resultData.status = data.status || 'completed'
         resultData.allCorrect = !!data.allCorrect
+        resultData.report = data.report || ''
+        resultData.ebbinghaus = data.ebbinghaus || []
+        resultData.masteryComparison = data.masteryComparison || []
+        practiceMeta.latestPractice = data
+        syncMasteryMetaAfterSubmit(resultData.knowledgePointChanges)
+
+        nextTick(() => {
+          renderMasteryChart()
+        })
 
         questions.value.forEach((question) => {
           const result = resultData.questionResults.find(item => item.questionId === question.id)
@@ -579,6 +877,7 @@ function submitPractice() {
           }
         })
 
+        openAnswerDialog(questions.value, resultData.questionResults)
         ElMessage.success(res.message || '提交成功')
       }
     })
@@ -730,7 +1029,8 @@ function getStatusText(status) {
 .submit-summary,
 .result-kp-meta,
 .progress-meta,
-.advice-item {
+.advice-item,
+.answer-dialog-meta {
   color: #6b7280;
   line-height: 1.8;
 }
@@ -743,6 +1043,44 @@ function getStatusText(status) {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.overview-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.overview-category-item {
+  border-radius: 18px;
+  padding: 16px;
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+  border: 1px solid #e8eef8;
+  box-shadow: 0 10px 24px rgba(31, 41, 55, 0.06);
+}
+
+.overview-category-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.overview-category-head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.overview-category-toggle {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 700;
+}
+
+.overview-category-content {
+  margin-top: 14px;
 }
 
 .overview-item,
@@ -854,6 +1192,71 @@ function getStatusText(status) {
   gap: 14px;
 }
 
+.result-report-section,
+.result-chart-section,
+.result-ebbinghaus-section {
+  margin-top: 24px;
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(37, 99, 235, 0.02);
+  border: 1px solid rgba(37, 99, 235, 0.05);
+}
+
+.section-title-sm {
+  font-size: 15px;
+  font-weight: 800;
+  color: #1e293b;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-title-sm::before {
+  content: '';
+  width: 4px;
+  height: 14px;
+  background: #2563eb;
+  border-radius: 2px;
+}
+
+.report-content {
+  color: #475569;
+  line-height: 1.7;
+  font-size: 14px;
+}
+
+.ebbinghaus-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.ebbinghaus-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 13px;
+}
+
+.ebbinghaus-item .el-icon {
+  color: #2563eb;
+}
+
+.plan-label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.plan-date {
+  color: #0f172a;
+  font-weight: 700;
+}
+
 .summary-grid {
   grid-template-columns: repeat(2, 1fr);
 }
@@ -932,3 +1335,23 @@ function getStatusText(status) {
   }
 }
 </style>
+
+.answer-dialog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.answer-dialog-item {
+  border-radius: 14px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #ffffff, #f8fbff);
+  border: 1px solid #e8eef8;
+}
+
+.answer-dialog-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 8px;
+}

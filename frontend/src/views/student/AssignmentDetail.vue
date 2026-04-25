@@ -9,14 +9,18 @@
       <template #header>
         <div class="card-header">
           <span>题目列表</span>
-          <div v-if="!viewMode">
+          <div v-if="!viewMode" class="header-actions">
+            <div class="upload-status">
+              已上传 {{ imageUrls.length }} 张图片
+            </div>
             <el-upload
               class="upload-demo"
               action="/api/student/answers/upload"
               :headers="{ Authorization: 'Bearer ' + (localStorage ? localStorage.getItem('token') : '') }"
               :on-success="handleImageUpload"
               :on-error="handleImageUploadError"
-              :auto-upload="false"
+              :on-remove="handleImageRemove"
+              :show-file-list="true"
               ref="uploadRef"
               accept="image/*"
               capture="camera"
@@ -33,7 +37,7 @@
       </template>
       
       <!-- 试卷信息 -->
-      <div v-if="paper && paper.filePath" class="paper-info">
+      <div v-if="paper && paper.filePath && !viewMode" class="paper-info">
         <el-card shadow="hover" class="paper-card">
           <template #header>
             <div class="paper-header">
@@ -52,6 +56,40 @@
       </div>
 
       <!-- 题目列表 -->
+      <div v-if="viewMode && paper && paper.filePath" class="paper-result-panel">
+        <div class="paper-result-header">
+          <div>
+            <div class="paper-result-title">PDF 试卷内容</div>
+            <div class="paper-result-desc">老师批改完成后，你仍然可以对照原始试卷与评语进行复盘。</div>
+          </div>
+          <el-button type="primary" @click="viewPaper(paper)">查看试卷</el-button>
+        </div>
+        <iframe v-if="canPreviewPdfInFrame" :src="paperPreviewSrc" class="paper-result-frame" title="学生PDF试卷预览" />
+        <div v-else class="paper-preview-fallback">
+          当前环境下无法内嵌显示 PDF，请点击右上角“查看试卷”按钮打开。
+        </div>
+      </div>
+
+      <div v-if="viewMode && gradedImages.length" class="uploaded-image-panel">
+        <div class="paper-result-title">已上传的作答图片</div>
+        <div class="uploaded-image-list">
+          <el-image
+            v-for="(image, index) in gradedImages"
+            :key="index"
+            :src="getFilePreviewUrl(image)"
+            :preview-src-list="gradedImages.map(getFilePreviewUrl)"
+            fit="cover"
+            class="uploaded-image-item"
+          />
+        </div>
+      </div>
+
+      <div v-if="viewMode" class="teacher-summary-card">
+        <div class="paper-result-title">老师整体评语</div>
+        <div class="teacher-summary-line teacher-summary-block"><strong>总体评价：</strong><span>{{ overallComment || '老师暂未填写评语' }}</span></div>
+        <div class="teacher-summary-line teacher-summary-block"><strong>订正建议：</strong><span>{{ overallCorrection || '老师暂未填写订正建议' }}</span></div>
+      </div>
+
       <div v-for="(question, index) in questions" :key="question.id" class="question-item">
         <div class="question-header">
           <span class="question-number">第{{ index + 1 }}题</span>
@@ -100,6 +138,8 @@
             标准答案：{{ getCorrectAnswer(question.id) || '待教师批改' }}
           </div>
           <div class="score">得分：{{ getScore(question.id) }}/{{ question.score || 0 }}分</div>
+          <div v-if="getTeacherComment(question.id)" class="teacher-feedback"><strong>老师评语：</strong>{{ getTeacherComment(question.id) }}</div>
+          <div v-if="getTeacherCorrection(question.id)" class="teacher-feedback"><strong>老师建议：</strong>{{ getTeacherCorrection(question.id) }}</div>
         </div>
       </div>
       
@@ -128,6 +168,18 @@ var results = reactive({})
 var uploadRef = ref(null)
 var imageUrls = ref([])
 var paper = ref(null)
+var gradedImages = ref([])
+var overallComment = ref('')
+var overallCorrection = ref('')
+
+var canPreviewPdfInFrame = computed(function() {
+  return !!(paper.value && paper.value.filePath && String(paper.value.fileType || '').toLowerCase() === '.pdf')
+})
+
+var paperPreviewSrc = computed(function() {
+  if (!canPreviewPdfInFrame.value) return ''
+  return getFilePreviewUrl(paper.value.filePath)
+})
 
 var viewMode = computed(function() {
   return route.query.view === 'result'
@@ -148,6 +200,13 @@ onUnmounted(function() {
   // 清理uploadRef，避免内存泄漏
   uploadRef.value = null
 })
+
+function resetImageUploads() {
+  imageUrls.value = []
+  if (uploadRef.value && typeof uploadRef.value.clearFiles === 'function') {
+    uploadRef.value.clearFiles()
+  }
+}
 
 function resetResults() {
   var keys = Object.keys(results)
@@ -175,6 +234,16 @@ function getCorrectAnswer(questionId) {
   return result ? result.correctAnswer : ''
 }
 
+function getTeacherComment(questionId) {
+  var result = results[questionId]
+  return result ? (result.teacherComment || result.comment || '') : ''
+}
+
+function getTeacherCorrection(questionId) {
+  var result = results[questionId]
+  return result ? (result.teacherCorrection || result.correction || '') : ''
+}
+
 function getScore(questionId) {
   var result = results[questionId]
   return result ? result.score : 0
@@ -200,24 +269,10 @@ function loadAssignment() {
       assignment.value = res.data.assignment
       questions.value = res.data.questions || []
       
-      // 检查是否有试卷
-      if (res.data.assignment && res.data.assignment.paperId) {
-        // 直接构建试卷信息，不需要通过API获取
-        // 尝试不同的文件格式
-        var paperId = res.data.assignment.paperId;
-        var possibleExtensions = ['.pdf', '.png', '.jpg', '.jpeg'];
-        
-        // 构建可能的文件路径
-        var filePath = '/uploads/papers/' + paperId + possibleExtensions[0];
-        
-        paper.value = {
-          id: paperId,
-          title: res.data.assignment.paperTitle || '试卷',
-          filePath: filePath,
-          fileName: res.data.assignment.paperTitle + possibleExtensions[0],
-          fileSize: 1024 * 1024, // 模拟文件大小
-          createdAt: new Date().toISOString() // 模拟上传时间
-        }
+      if (res.data.paper) {
+        paper.value = res.data.paper
+      } else {
+        paper.value = null
       }
       
       if (viewMode.value) {
@@ -247,6 +302,15 @@ function loadResults() {
   }).then(function(res) {
     if (res.success) {
       fillResults(res.data.questions || [])
+      if (res.data.paper) {
+        paper.value = res.data.paper
+      }
+      gradedImages.value = Array.isArray(res.data.images) ? res.data.images : []
+      var imageReviewResult = Array.isArray(res.data.questions)
+        ? res.data.questions.find(function(item) { return item.questionId === '__image_review__' })
+        : null
+      overallComment.value = res.data.overallComment || (imageReviewResult && imageReviewResult.teacherComment) || (res.data.questions || []).map(function(item) { return item.teacherComment || '' }).filter(Boolean).join('；') || ''
+      overallCorrection.value = res.data.overallCorrection || (imageReviewResult && imageReviewResult.teacherCorrection) || (res.data.questions || []).map(function(item) { return item.teacherCorrection || '' }).filter(Boolean).join('；') || ''
     }
   }).catch(function() {
     ElMessage.warning('暂无答题结果')
@@ -290,15 +354,30 @@ function getTypeText(type) {
   return map[type] || '未知'
 }
 
-function handleImageUpload(response) {
+function handleImageUpload(response, uploadFile) {
   if (response.success && response.data && response.data.filePath) {
-    imageUrls.value.push(response.data.filePath)
-    ElMessage.success('图片上传成功')
+    if (imageUrls.value.indexOf(response.data.filePath) === -1) {
+      imageUrls.value.push(response.data.filePath)
+    }
+    if (uploadFile) {
+      uploadFile.uploadedPath = response.data.filePath
+    }
+    ElMessage.success('\u56fe\u7247\u4e0a\u4f20\u6210\u529f')
   } else {
-    ElMessage.error('图片上传失败')
+    ElMessage.error('\u56fe\u7247\u4e0a\u4f20\u5931\u8d25')
   }
 }
 
+function handleImageRemove(uploadFile) {
+  var targetPath = uploadFile && uploadFile.uploadedPath
+  if (!targetPath && uploadFile && uploadFile.response && uploadFile.response.data) {
+    targetPath = uploadFile.response.data.filePath
+  }
+  if (!targetPath) return
+  imageUrls.value = imageUrls.value.filter(function(item) {
+    return item !== targetPath
+  })
+}
 function handleImageUploadError() {
   ElMessage.error('图片上传失败，请重试')
 }
@@ -313,11 +392,11 @@ function submitAnswers() {
   }
   
   if (answeredCount === 0 && imageUrls.value.length === 0) {
-    ElMessage.warning('请至少回答一道题目或上传一张图片')
+    ElMessage.warning('\u8bf7\u81f3\u5c11\u56de\u7b54\u4e00\u9053\u9898\u76ee\u6216\u4e0a\u4f20\u4e00\u5f20\u56fe\u7247')
     return
   }
   
-  ElMessageBox.confirm('确定提交答案吗？已答' + answeredCount + '/' + questions.value.length + '题，上传了' + imageUrls.value.length + '张图片', '提示').then(function() {
+  ElMessageBox.confirm('\u786e\u5b9a\u63d0\u4ea4\u7b54\u6848\u5417\uff1f\u63d0\u4ea4\u540e\u5c06\u8fdb\u5165\u6559\u5e08\u624b\u52a8\u6279\u6539\u3002', '\u63d0\u793a').then(function() {
     submitting.value = true
     
     api.post('/student/assignments/' + route.params.id + '/submit', {
@@ -325,7 +404,8 @@ function submitAnswers() {
       images: imageUrls.value
     }).then(function(res) {
       if (res.success) {
-        ElMessage.success('提交成功')
+        resetImageUploads()
+        ElMessage.success('\u63d0\u4ea4\u6210\u529f\uff0c\u7b49\u5f85\u6559\u5e08\u6279\u6539')
         if (res.data && res.data.answerId) {
           sessionStorage.setItem('latest-answer-' + route.params.id, res.data.answerId)
         }
@@ -333,7 +413,7 @@ function submitAnswers() {
         loadResults()
       }
     }).catch(function() {
-      ElMessage.error('提交失败')
+      ElMessage.error('\u63d0\u4ea4\u5931\u8d25')
     }).finally(function() {
       submitting.value = false
     })
@@ -432,5 +512,72 @@ function submitAnswers() {
 
 .paper-details p {
   margin-bottom: 8px;
+}
+
+.paper-result-panel,
+.uploaded-image-panel,
+.teacher-summary-card {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #f8fafc;
+  border: 1px solid #e5eaf3;
+  border-radius: 12px;
+}
+
+.paper-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.paper-result-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #303133;
+}
+
+.paper-result-desc {
+  margin-top: 6px;
+  color: #909399;
+}
+
+.paper-result-frame {
+  width: 100%;
+  height: 560px;
+  border: 1px solid #dfe6ee;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.paper-preview-fallback {
+  padding: 20px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #64748b;
+  line-height: 1.7;
+}
+
+.uploaded-image-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.uploaded-image-item {
+  width: 160px;
+  height: 160px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.teacher-summary-line,
+.teacher-feedback {
+  margin-top: 10px;
+  line-height: 1.7;
+  color: #475467;
 }
 </style>

@@ -114,7 +114,7 @@ const routes = [
       {
         path: 'knowledge',
         name: 'StudentKnowledge',
-        component: function () { return import('@/views/student/Knowledge.vue') },
+        component: function () { return import('@/views/student/KnowledgeGraph.vue') },
         meta: { title: '知识图谱' }
       },
       {
@@ -126,7 +126,7 @@ const routes = [
       {
         path: 'practice',
         name: 'StudentPractice',
-        component: function () { return import('@/views/student/Practice.vue') },
+        component: function () { return import('@/views/student/WeakPractice.vue') },
         meta: { title: '薄弱补练' }
       },
       {
@@ -227,7 +227,13 @@ const routes = [
 
 var router = createRouter({
   history: createWebHistory(),
-  routes: routes
+  routes: routes,
+  scrollBehavior: function(to, from, savedPosition) {
+    if (savedPosition) {
+      return savedPosition
+    }
+    return { top: 0, behavior: 'smooth' }
+  }
 })
 
 // 路由守卫

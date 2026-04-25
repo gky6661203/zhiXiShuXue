@@ -74,7 +74,33 @@
           </el-select>
         </el-form-item>
 
+        <el-form-item label="知识树筛选">
+          <el-cascader
+            v-model="selectedKnowledgePath"
+            :options="knowledgeTree"
+            :props="cascaderProps"
+            clearable
+            filterable
+            placeholder="按知识树节点筛选题目"
+            @change="handleKnowledgePathChange"
+          />
+        </el-form-item>
+
         <el-form-item label="选择题目" prop="questionIds">
+          <div class="question-filter-panel">
+            <el-select v-model="questionFilter.type" clearable placeholder="全部题型" style="width: 140px">
+              <el-option label="选择题" value="choice" />
+              <el-option label="填空题" value="fill" />
+              <el-option label="简答题" value="shortAnswer" />
+            </el-select>
+            <el-select v-model="questionFilter.difficulty" clearable placeholder="全部难度" style="width: 140px">
+              <el-option label="1级" :value="1" />
+              <el-option label="2级" :value="2" />
+              <el-option label="3级" :value="3" />
+              <el-option label="4级" :value="4" />
+              <el-option label="5级" :value="5" />
+            </el-select>
+          </div>
           <el-select
             v-model="form.questionIds"
             multiple
@@ -82,10 +108,10 @@
             clearable
             collapse-tags
             collapse-tags-tooltip
-            placeholder="可从题库选择题目"
+            placeholder="按知识树分类后的题库"
           >
             <el-option
-              v-for="q in questionBank"
+              v-for="q in filteredQuestionBank"
               :key="q.id"
               :label="buildQuestionLabel(q)"
               :value="q.id"
@@ -138,7 +164,7 @@
 
         <div class="detail-subtitle">已提交记录</div>
         <el-table :data="currentAssignment.answers || []" style="width: 100%">
-          <el-table-column prop="studentId" label="学生ID" />
+          <el-table-column prop="studentName" label="学生" />
           <el-table-column prop="submittedAt" label="提交时间" width="180">
             <template #default="scope">{{ formatDate(scope.row.submittedAt) }}</template>
           </el-table-column>
@@ -156,7 +182,7 @@
   <div class="detail-subtitle">答题明细</div>
 
   <el-alert
-    :title="`学生 ${selectedAnswerDetail.studentId} 的答题详情`"
+    :title="`学生 ${selectedAnswerDetail.studentName || '未命名学生'} 的答题详情`"
     type="info"
     :closable="false"
     show-icon
@@ -225,11 +251,12 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import api from '@/utils/api'
 import dayjs from 'dayjs'
+import { buildSharedKnowledgeTree, KNOWLEDGE_CATEGORY_LEAF_MAP } from '@/utils/knowledge-meta'
 
 var loading = ref(false)
 var dialogVisible = ref(false)
@@ -239,8 +266,19 @@ var assignments = ref([])
 var papers = ref([])
 var classes = ref([])
 var questionBank = ref([])
+var knowledgeTree = ref([])
 var currentAssignment = ref(null)
 var selectedAnswerDetail = ref(null)
+var selectedKnowledgePath = ref([])
+var questionFilter = reactive({ type: '', difficulty: '' })
+var cascaderProps = { value: 'id', label: 'name', children: 'children', emitPath: true, checkStrictly: true }
+var questionKpAliasMap = {
+  'kp-001': 'alg-1', 'kp-002': 'alg-2', 'kp-003': 'alg-3', 'kp-004': 'alg-1', 'kp-005': 'alg-5',
+  'kp-006': 'geo-1', 'kp-007': 'geo-2', 'kp-008': 'alg-5', 'kp-009': 'alg-6', 'kp-010': 'alg-4',
+  'kp-011': 'alg-3', 'kp-012': 'stat-1'
+}
+var teacherKnowledgeTreeConfig = buildSharedKnowledgeTree()
+var categoryLeafMap = KNOWLEDGE_CATEGORY_LEAF_MAP
 
 var form = reactive({
   title: '',
@@ -251,10 +289,19 @@ var form = reactive({
   deadline: ''
 })
 
-var rules = {
-  title: [{ required: true, message: '请输入作业名称', trigger: 'blur' }],
-  classId: [{ required: true, message: '请选择班级', trigger: 'change' }]
-}
+var filteredQuestionBank = computed(function() {
+  var leafId = selectedKnowledgePath.value.length ? selectedKnowledgePath.value[selectedKnowledgePath.value.length - 1] : ''
+  var actualLeafIds = leafId
+    ? ((categoryLeafMap[leafId] || [leafId]).concat(questionKpAliasMap[leafId] ? [questionKpAliasMap[leafId]] : [])).filter(Boolean)
+    : []
+  return questionBank.value.filter(function(question) {
+    var kpIds = Array.isArray(question.knowledgePoints) ? question.knowledgePoints : (question.knowledgePointId ? [question.knowledgePointId] : [])
+    if (actualLeafIds.length && !actualLeafIds.some(function(id) { return kpIds.indexOf(id) !== -1 })) return false
+    if (questionFilter.type && question.type !== questionFilter.type) return false
+    if (questionFilter.difficulty && Number(question.difficultyLevel || question.difficulty || 0) !== Number(questionFilter.difficulty)) return false
+    return true
+  })
+})
 
 onMounted(function() {
   loadData()
@@ -266,12 +313,16 @@ function loadData() {
   Promise.all([
     api.get('/teacher/assignments'),
     api.get('/teacher/papers', { pageSize: 100 }),
-    api.get('/teacher/classes')
+    api.get('/teacher/classes'),
+    api.get('/teacher/questions'),
+    api.get('/common/knowledge-points')
   ])
     .then(function(results) {
       if (results[0].success) assignments.value = results[0].data
       if (results[1].success) papers.value = results[1].data.data
       if (results[2].success) classes.value = results[2].data
+      if (results[3].success) questionBank.value = Array.isArray(results[3].data) ? results[3].data : []
+      if (results[4].success) knowledgeTree.value = teacherKnowledgeTreeConfig
     })
     .catch(function() {
       ElMessage.error('基础数据加载失败')
@@ -299,7 +350,16 @@ function showAddDialog() {
   form.questionIds = []
   form.levels = ['strong']
   form.deadline = ''
+  selectedKnowledgePath.value = []
+  questionFilter.type = ''
+  questionFilter.difficulty = ''
   dialogVisible.value = true
+}
+
+function handleKnowledgePathChange() {
+  form.questionIds = form.questionIds.filter(function(id) {
+    return filteredQuestionBank.value.some(function(question) { return question.id === id })
+  })
 }
 
 function submitForm() {
@@ -381,7 +441,8 @@ function deleteAssignment(row) {
 
 function buildQuestionLabel(question) {
   var prefix = question.type === 'choice' ? '选择题' : (question.type === 'fill' ? '填空题' : '简答题')
-  return prefix + ' · ' + question.content
+  var kpName = question.knowledgeNodeName || question.knowledgePointName || (Array.isArray(question.knowledgePoints) && question.knowledgePoints.length ? question.knowledgePoints[0] : '未分类')
+  return prefix + ' · ' + kpName + ' · ' + question.content
 }
 
 function getAssignmentSourceText(assignment) {
@@ -442,6 +503,13 @@ function formatDate(date) {
   margin-top: 8px;
   color: #909399;
   font-size: 12px;
+}
+
+.question-filter-panel {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
 .answer-detail-panel {
