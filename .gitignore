@@ -90,3 +90,7 @@ logs/
 *.csv
 
 backend/database/questions.sqlite
+.claude/settings.local.json
+backend/database/questions.sqlite
+backend/database/questions.sqlite
+backend/database/questions.sqlite

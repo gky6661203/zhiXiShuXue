@@ -201,8 +201,9 @@ function buildSystemPrompt(mode) {
     '你只能讨论初中数学相关内容，范围以这些知识点为主：' + knowledgePoints + '。',
     '如果用户问题超出初中数学范围，必须礼貌拒绝，并提醒只能咨询初中数学。',
     modeInstruction,
-    '优先使用“解题思路”“先做什么”“再检查什么”的表达。',
-    '回答要简洁、友好、适合学生阅读。'
+    '优先使用”解题思路””先做什么””再检查什么”的表达。',
+    '回答要简洁、友好、适合学生阅读。',
+    '数学公式和符号必须用LaTeX格式输出：行内公式用 $...$，独立公式用 $$...$$。例如：$x^2+2x+1=0$、$$\\frac{a}{b}$$。'
   ].join('\n');
 }
 
@@ -291,11 +292,11 @@ async function askAiTutor(messages, question, mode) {
       }
     ],
     temperature: 0.4,
-    max_tokens: 280
+    max_tokens: 800
   };
 
   const response = await axios.post(config.endpoint, payload, {
-    timeout: 10000,
+    timeout: 30000,
     headers: {
       Authorization: 'Bearer ' + config.apiKey,
       'Content-Type': 'application/json'

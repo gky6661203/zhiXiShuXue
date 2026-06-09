@@ -3,7 +3,7 @@ import { captureException } from './sentry'
 
 var api = axios.create({
   baseURL: '/api',
-  timeout: 15000,
+  timeout: 35000,
   headers: { 'Content-Type': 'application/json' }
 })
 

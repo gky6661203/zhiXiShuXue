@@ -94,7 +94,7 @@
               <span>AI</span>
             </div>
             <div class="message-bubble">
-              <div class="message-text">{{ item.content }}</div>
+              <div class="message-text" v-html="renderMath(item.content)"></div>
             </div>
             <div v-if="item.role === 'user'" class="message-avatar ai-user-avatar">
               <el-icon><UserFilled /></el-icon>
@@ -164,6 +164,51 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ChatDotRound, Document, UserFilled, Warning, Promotion, Close } from '@element-plus/icons-vue'
 import api from '@/utils/api'
+import katex from 'katex'
+import 'katex/dist/katex.min.css'
+
+function escapeHtml(text) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+function renderMath(text) {
+  if (!text) return ''
+  var result = ''
+  var remaining = text
+  while (remaining.length > 0) {
+    var displayStart = remaining.indexOf('$$')
+    var inlineStart = remaining.indexOf('$')
+    if (displayStart === -1 && inlineStart === -1) {
+      result += escapeHtml(remaining).replace(/\n/g, '<br>')
+      break
+    }
+    var useDisplay = false
+    var startIdx = -1
+    if (displayStart !== -1 && (inlineStart === -1 || displayStart <= inlineStart)) {
+      useDisplay = true
+      startIdx = displayStart
+    } else {
+      startIdx = inlineStart
+    }
+    var delim = useDisplay ? '$$' : '$'
+    var endIdx = remaining.indexOf(delim, startIdx + delim.length)
+    if (endIdx === -1) {
+      result += escapeHtml(remaining).replace(/\n/g, '<br>')
+      break
+    }
+    if (startIdx > 0) {
+      result += escapeHtml(remaining.slice(0, startIdx)).replace(/\n/g, '<br>')
+    }
+    var latex = remaining.slice(startIdx + delim.length, endIdx)
+    try {
+      result += katex.renderToString(latex, { displayMode: useDisplay, throwOnError: false })
+    } catch (e) {
+      result += escapeHtml(delim + latex + delim)
+    }
+    remaining = remaining.slice(endIdx + delim.length)
+  }
+  return result
+}
 
 var panelVisible = ref(false)
 var loading = ref(false)
@@ -746,6 +791,16 @@ onMounted(function () {
 .message-text {
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+.message-text :deep(.katex) {
+  font-size: 1em;
+}
+
+.message-text :deep(.katex-display) {
+  margin: 8px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* === 加载状态 === */

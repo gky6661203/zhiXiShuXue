@@ -18,7 +18,19 @@
       "Bash(python .claude/skills/ui-ux-pro-max/scripts/search.py \"education math learning platform modern minimal premium\" --design-system -p \"智析数学\" -f markdown)",
       "mcp__ide__getDiagnostics",
       "WebFetch(domain:localhost)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(python3 -c ' *)",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "Bash(node -e ' *)",
+      "Bash(mkdir -p docx_extract)",
+      "Bash(unzip -o \"c:/Users/32328/xwechat_files/wxid_ons1d1bcv1yk22_7bc9/msg/file/2026-05/互联网+计划书.docx\" -d docx_extract/)",
+      "Bash(sed 's/<[^>]*>//g')",
+      "Bash(grep -v '^$')",
+      "Bash(xmllint --xpath \"//*[local-name\\(\\)='p']/text\\(\\)\" word/document.xml)",
+      "Bash(sed 's/<w:t[^>]*>//g')",
+      "Bash(curl *)",
+      "Bash(npm ls *)"
     ]
   }
 }
