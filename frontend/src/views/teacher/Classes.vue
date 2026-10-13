@@ -2,7 +2,7 @@
   <div class="class-management">
     <div class="page-header">
       <h2>班级管理</h2>
-      <p>管理您的班级和学生信息</p>
+      <p>建班、改班级信息，看每个班有多少学生。</p>
     </div>
     
     <el-card class="gradient-card">
@@ -45,7 +45,7 @@
         ref="formRef"
         :model="classForm"
         :rules="rules"
-        label-width="80px"
+        label-width="104px"
       >
         <el-form-item label="班级名称" prop="name">
           <el-input v-model="classForm.name" placeholder="请输入班级名称" />

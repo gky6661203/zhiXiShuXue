@@ -3,11 +3,15 @@
    Premium Educational Platform Design System
    ============================================ */
 
-/* === 字体 === */
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap');
+/* === 字体 ===
+   使用系统自带中文字体，不依赖外网字体服务（Google Fonts 在国内经常无法加载）。 */
 
 /* === 设计令牌 === */
 :root {
+  /* --- 字体 --- */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', 'Segoe UI', sans-serif;
+  --font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'STSong', 'SimSun', serif;
+
   /* --- 品牌系统 --- */
   --brand-hue: 194;
   --brand-start: #2d8ee8;
@@ -89,32 +93,6 @@
   --duration-slow: 400ms;
 }
 
-/* === 暗色模式 === */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --surface-base: hsl(220, 15%, 8%);
-    --surface-raised: hsl(220, 15%, 12%);
-    --surface-overlay: hsla(220, 15%, 12%, 0.92);
-    --surface-muted: hsl(220, 15%, 15%);
-
-    --text-primary: hsl(40, 20%, 96%);
-    --text-regular: hsl(40, 15%, 85%);
-    --text-secondary: hsl(40, 10%, 70%);
-    --text-muted: hsl(40, 8%, 55%);
-    --text-disabled: hsl(40, 8%, 40%);
-
-    --border-default: hsl(220, 15%, 20%);
-    --border-subtle: hsl(220, 15%, 16%);
-    --border-strong: hsl(220, 15%, 28%);
-
-    --shadow-xs: 0 1px 2px hsla(0, 0%, 0%, 0.2);
-    --shadow-sm: 0 2px 8px hsla(0, 0%, 0%, 0.3), 0 1px 2px hsla(0, 0%, 0%, 0.2);
-    --shadow-md: 0 4px 16px hsla(0, 0%, 0%, 0.35), 0 2px 4px hsla(0, 0%, 0%, 0.2);
-    --shadow-lg: 0 8px 32px hsla(0, 0%, 0%, 0.4), 0 4px 8px hsla(0, 0%, 0%, 0.25);
-    --shadow-xl: 0 16px 48px hsla(0, 0%, 0%, 0.45), 0 8px 16px hsla(0, 0%, 0%, 0.3);
-  }
-}
-
 /* === 基础重置 === */
 * {
   margin: 0;
@@ -123,7 +101,7 @@
 }
 
 body {
-  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -595,7 +573,7 @@ button {
   font-size: 22px;
   font-weight: 700;
   color: var(--text-primary);
-  font-family: 'Noto Serif SC', serif;
+  font-family: var(--font-serif);
   letter-spacing: 0.02em;
 }
 
@@ -647,7 +625,7 @@ button {
   font-size: 36px;
   font-weight: 800;
   color: var(--text-primary);
-  font-family: 'Noto Serif SC', serif;
+  font-family: var(--font-serif);
   line-height: 1.1;
   letter-spacing: -0.02em;
 }
@@ -836,53 +814,9 @@ button {
   animation: shimmer 2s infinite;
 }
 
-/* === 响应式 === */
-@media (max-width: 1024px) {
-  .sidebar {
-    width: var(--sidebar-collapsed);
-  }
-
-  .sidebar .logo-text,
-  .sidebar .logo-subtitle,
-  .sidebar .menu-text,
-  .sidebar .user-name,
-  .sidebar .user-role {
-    display: none;
-  }
-
-  .sidebar .logo {
-    justify-content: center;
-    padding: 0;
-  }
-
-  .sidebar .user-avatar {
-    justify-content: center;
-    padding: 10px;
-  }
-
-  .main-content {
-    margin-left: var(--sidebar-collapsed);
-  }
-}
-
+/* === 响应式 ===
+   侧边栏在小屏下的抽屉行为写在各个 layouts/*Layout.vue 里 */
 @media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%);
-  }
-
-  .sidebar.is-open {
-    transform: translateX(0);
-  }
-
-  .main-content {
-    margin-left: 0;
-    padding: 16px;
-  }
-
-  .el-dialog {
-    width: 90% !important;
-  }
-
   .page-header {
     padding: 20px;
     border-radius: var(--radius-lg);
@@ -1037,7 +971,7 @@ body::before {
 
 .page-header h2 {
   color: #101a24 !important;
-  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-family: var(--font-sans) !important;
   font-weight: 900 !important;
   letter-spacing: 0 !important;
 }
@@ -1084,7 +1018,7 @@ body::before {
 
 .stat-card .stat-value {
   color: var(--text-primary) !important;
-  font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-family: var(--font-sans) !important;
   font-weight: 900 !important;
 }
 
@@ -1237,4 +1171,17 @@ body::before {
   background: #b42318 !important;
   color: #ffffff !important;
   box-shadow: 0 10px 20px rgba(180, 35, 24, 0.18) !important;
+}
+
+/* === 小屏下弹窗不超出屏幕 === */
+@media (max-width: 768px) {
+  .el-dialog {
+    width: 94vw !important;
+    max-width: 94vw;
+    margin-top: 6vh !important;
+  }
+
+  .el-message-box {
+    max-width: 92vw;
+  }
 }

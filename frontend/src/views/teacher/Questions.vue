@@ -4,7 +4,7 @@
     <header class="page-header">
       <div class="header-text">
         <h2>题目管理</h2>
-        <p>支持按知识点、难度、题型三维筛选题库</p>
+        <p>按知识点、难度和题型筛选题目，公式可以用 LaTeX 写。</p>
       </div>
       <div class="header-stats">
         共 {{ total }} 道题目
@@ -38,21 +38,23 @@
     <!-- 题目列表 -->
     <el-card class="panel-card">
       <el-table :data="questions" style="width: 100%" v-loading="loading">
-        <el-table-column prop="knowledgeNodeName" label="知识点" width="150" />
+        <el-table-column label="知识点" width="160" show-overflow-tooltip>
+          <template #default="scope">{{ knowledgeName(scope.row) }}</template>
+        </el-table-column>
         <el-table-column prop="type" label="题型" width="100">
           <template #default="scope">
             <el-tag>{{ getTypeText(scope.row.type) }}</el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="content" label="题目内容" show-overflow-tooltip />
-        <el-table-column prop="difficultyLevel" label="难度" width="90">
+        <el-table-column label="难度" width="90">
           <template #default="scope">
-            <el-tag :type="getDifficultyType(scope.row.difficultyLevel)">
-              {{ scope.row.difficultyLevel || '-' }}
-            </el-tag>
+            <el-tag :type="getDifficultyType(scope.row)">{{ getDifficultyText(scope.row) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="answerCount" label="作答人数" width="100" />
+        <el-table-column label="作答人数" width="100">
+          <template #default="scope">{{ scope.row.answerCount || 0 }}</template>
+        </el-table-column>
         <el-table-column prop="createdAt" label="创建时间" width="180">
           <template #default="scope">{{ formatDate(scope.row.createdAt) }}</template>
         </el-table-column>
@@ -80,7 +82,7 @@
 
     <!-- 添加/编辑题目弹窗 -->
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑题目' : '添加题目'" width="600px" destroy-on-close>
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="104px">
         <el-form-item label="题型" prop="type">
           <el-select v-model="form.type" placeholder="请选择题型">
             <el-option label="选择题" value="choice" />
@@ -96,7 +98,8 @@
         </el-form-item>
 
         <el-form-item label="题目内容" prop="content">
-          <el-input v-model="form.content" type="textarea" :rows="3" placeholder="请输入题目内容" />
+          <el-input v-model="form.content" type="textarea" :rows="3" placeholder="请输入题目内容，公式可用 $...$ 包裹，例如 $\frac{1}{2}x^2$" />
+          <div v-if="form.content && form.content.indexOf('$') > -1" class="latex-preview">预览：<MathText :text="form.content" /></div>
         </el-form-item>
 
         <el-form-item v-if="form.type === 'choice'" label="选项" prop="optionsText">
@@ -134,6 +137,7 @@
 </template>
 
 <script setup>
+import MathText from '@/components/MathText.vue'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/api'
@@ -330,16 +334,36 @@ function submitForm() {
 }
 
 function getTypeText(type) {
-  if (type === 'choice') return '选择题'
+  if (type === 'choice' || type === 'objective') return '选择题'
   if (type === 'fill') return '填空题'
-  if (type === 'shortAnswer') return '解答题'
-  return '未知'
+  if (type === 'judge') return '判断题'
+  return '解答题'
 }
 
-function getDifficultyType(level) {
+// 难度可能是 easy/medium/hard，也可能是 1–5 的数字
+function difficultyLevel(row) {
+  const map = { easy: 1, medium: 3, hard: 5 }
+  const value = row.difficultyLevel || row.difficulty
+  return map[value] || Number(value) || 3
+}
+
+function getDifficultyText(row) {
+  const level = difficultyLevel(row)
+  return level >= 4 ? '难' : level >= 3 ? '中' : '易'
+}
+
+function getDifficultyType(row) {
+  const level = difficultyLevel(row)
   if (level >= 4) return 'danger'
-  if (level >= 2) return 'warning'
+  if (level >= 3) return 'warning'
   return 'success'
+}
+
+function knowledgeName(row) {
+  if (row.knowledgeNodeName) return row.knowledgeNodeName
+  const id = row.knowledgePointId || (Array.isArray(row.knowledgePoints) ? row.knowledgePoints[0] : '')
+  const found = knowledgeOptions.value.find(item => item.id === id)
+  return found ? found.name : (id || '-')
 }
 
 function formatDate(date) {
@@ -379,7 +403,7 @@ function formatDate(date) {
 }
 
 .header-text h2 {
-  font-family: 'Noto Serif SC', serif;
+  font-family: var(--font-serif);
   font-size: 24px;
   font-weight: 700;
   color: var(--text-primary);
@@ -427,4 +451,5 @@ function formatDate(date) {
   display: flex;
   justify-content: flex-end;
 }
+.latex-preview { margin-top: 6px; width: 100%; padding: 8px 10px; border-radius: 8px; background: #f5f8ff; color: var(--nb-ink-2); line-height: 1.8; }
 </style>

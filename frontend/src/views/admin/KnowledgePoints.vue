@@ -2,7 +2,7 @@
   <div class="knowledge-points-management">
     <div class="page-header">
       <h2>知识点管理</h2>
-      <p>管理初中数学知识点体系</p>
+      <p>初中数学的知识点树。题目、练习和学情分析都按这里的知识点归类。</p>
     </div>
     
     <el-card class="gradient-card">
@@ -37,7 +37,7 @@
     </el-card>
     
     <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑知识点' : '添加知识点'" width="500px">
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="104px">
         <el-form-item label="名称" prop="name">
           <el-input v-model="form.name" placeholder="请输入知识点名称" />
         </el-form-item>
@@ -186,14 +186,14 @@ function submitForm() {
   flex: 0 0 auto;
   min-height: 26px;
   padding: 3px 8px !important;
-  border: 1px solid rgba(36, 136, 221, 0.24) !important;
+  border: 1px solid var(--nb-blue-soft) !important;
   border-radius: 999px !important;
-  background: rgba(247, 253, 255, 0.96) !important;
-  color: #0b5fa8 !important;
+  background: var(--nb-blue-soft) !important;
+  color: var(--nb-blue) !important;
   font-size: 14px !important;
   font-weight: 900 !important;
   line-height: 1.2;
-  box-shadow: 0 6px 14px rgba(42, 145, 185, 0.08) !important;
+  box-shadow: none !important;
 }
 
 .tree-actions :deep(.el-button + .el-button) {
@@ -203,21 +203,21 @@ function submitForm() {
 .tree-actions :deep(.el-button.is-link:hover),
 .tree-actions :deep(.el-button.is-link:focus-visible) {
   border-color: transparent !important;
-  background: #0b5fa8 !important;
+  background: var(--nb-blue) !important;
   color: #ffffff !important;
-  box-shadow: 0 10px 20px rgba(11, 95, 168, 0.2) !important;
+  box-shadow: none !important;
 }
 
 .tree-actions :deep(.el-button.is-link.el-button--danger) {
-  border-color: rgba(180, 35, 24, 0.22) !important;
-  background: rgba(255, 247, 247, 0.98) !important;
-  color: #b42318 !important;
+  border-color: var(--nb-red-soft) !important;
+  background: var(--nb-red-soft) !important;
+  color: var(--nb-red-ink) !important;
 }
 
 .tree-actions :deep(.el-button.is-link.el-button--danger:hover),
 .tree-actions :deep(.el-button.is-link.el-button--danger:focus-visible) {
-  background: #b42318 !important;
+  background: var(--nb-red-ink) !important;
   color: #ffffff !important;
-  box-shadow: 0 10px 20px rgba(180, 35, 24, 0.18) !important;
+  box-shadow: none !important;
 }
 </style>

@@ -2,7 +2,7 @@
   <div class="student-management">
     <div class="page-header">
       <h2>学生管理</h2>
-      <p>管理班级学生信息</p>
+      <p>查看和管理每个班的学生名单。</p>
     </div>
     
     <el-card class="gradient-card">
@@ -58,7 +58,7 @@
         ref="formRef"
         :model="studentForm"
         :rules="rules"
-        label-width="80px"
+        label-width="104px"
       >
         <el-form-item label="学号" prop="studentNo">
           <el-input v-model="studentForm.studentNo" placeholder="请输入学号" />

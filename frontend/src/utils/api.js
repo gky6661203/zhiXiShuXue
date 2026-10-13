@@ -57,15 +57,7 @@ request.student = {
   getKnowledgeDetail: function (kpId) { return request.get('/student/knowledge-point/' + kpId + '/detail') },
   getPracticeQuestions: function (kpId) { return request.get('/student/practice/' + kpId) },
   submitPractice: function (kpId, data) { return request.post('/student/practice/' + kpId + '/submit', data) },
-  getQuestionsByKp: function (kpId) { return request.get('/student/questions', { knowledgePointId: kpId }) },
-  getAiTutorStatus: function () { return request.get('/student/ai-tutor/status') },
-  askAiTutor: function (data) { return request.post('/student/ai-tutor/chat', data) }
-}
-
-request.admin = {
-  getAiTutorSettings: function () { return request.get('/admin/ai-tutor/settings') },
-  validateAiTutorSettings: function (data) { return request.post('/admin/ai-tutor/validate', data) },
-  saveAiTutorSettings: function (data) { return request.put('/admin/ai-tutor/settings', data) }
+  getQuestionsByKp: function (kpId) { return request.get('/student/questions', { knowledgePointId: kpId }) }
 }
 
 request.common = {

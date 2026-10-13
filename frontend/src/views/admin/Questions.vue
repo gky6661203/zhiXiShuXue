@@ -5,7 +5,7 @@
       <div class="header-content">
         <div class="header-text">
           <h2>题库管理</h2>
-          <p>管理系统中的所有题目，支持增删改查</p>
+          <p>平台里所有的题目。可以按知识点、难度和题型筛选，公式用 LaTeX 写。</p>
         </div>
       </div>
     </header>
@@ -82,7 +82,7 @@
       class="advanced-dialog"
       :close-on-click-modal="false"
     >
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="104px">
         <el-form-item label="题型" prop="type">
           <el-select v-model="form.type" style="width: 100%;">
             <el-option label="选择题" value="choice" />
@@ -91,7 +91,8 @@
           </el-select>
         </el-form-item>
         <el-form-item label="内容" prop="content">
-          <el-input v-model="form.content" type="textarea" :rows="3" placeholder="请输入题目内容" />
+          <el-input v-model="form.content" type="textarea" :rows="3" placeholder="请输入题目内容，公式可用 $...$ 包裹，例如 $\frac{1}{2}x^2$" />
+          <div v-if="form.content && form.content.indexOf('$') > -1" class="latex-preview">预览：<MathText :text="form.content" /></div>
         </el-form-item>
         <el-form-item v-if="form.type === 'choice'" label="选项" prop="optionsText">
           <el-input
@@ -124,6 +125,7 @@
 </template>
 
 <script setup>
+import MathText from '@/components/MathText.vue'
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/api'
@@ -344,7 +346,7 @@ function getDifficultyText(difficulty) {
 }
 
 .header-text h2 {
-  font-family: 'Noto Serif SC', serif;
+  font-family: var(--font-serif);
   font-size: 26px;
   font-weight: 700;
   color: var(--text-primary);
@@ -428,4 +430,5 @@ function getDifficultyText(difficulty) {
   height: 3px;
   background: var(--brand-gradient);
 }
+.latex-preview { margin-top: 6px; width: 100%; padding: 8px 10px; border-radius: 8px; background: #f5f8ff; color: var(--nb-ink-2); line-height: 1.8; }
 </style>

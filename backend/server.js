@@ -34,14 +34,12 @@ const authRoutes = require('./routes/auth');
 const teacherRoutes = require('./routes/teacher');
 const studentRoutes = require('./routes/student');
 const adminRoutes = require('./routes/admin');
-const aiTutorAdminRoutes = require('./routes/ai-tutor-admin');
 const commonRoutes = require('./routes/common');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/student', studentRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/admin/ai-tutor', aiTutorAdminRoutes);
 app.use('/api/common', commonRoutes);
 
 app.get('/api/health', (req, res) => {

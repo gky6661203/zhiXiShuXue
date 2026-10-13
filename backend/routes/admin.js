@@ -5,7 +5,6 @@ const XLSX = require('xlsx');
 const bcrypt = require('bcryptjs');
 const db = require('../database/memory-db');
 const { ensureManualQuestionBank, getQuestionBankByNode } = require('../services/manual-question-bank');
-const { buildAdminSettingsPayload, getAdminSettingsView, validateRemoteConfig } = require('../services/ai-tutor');
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -44,7 +43,7 @@ function buildImportSummary(classes, students, users) {
 // 获取系统配置
 router.get('/settings', (req, res) => {
   try {
-    res.json({ success: true, data: { ...db.data.settings, ...getAdminSettingsView() } });
+    res.json({ success: true, data: db.data.settings });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

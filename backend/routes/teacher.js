@@ -1146,6 +1146,11 @@ router.get('/answers/export/excel', (req, res) => {
   }
 });
 
+// 已出最终分数的提交：自动批改完成或老师已批改。status 为 submitted 表示还在等老师批改。
+function isGradedAnswer(answer) {
+  return answer && answer.status !== 'submitted';
+}
+
 router.get('/analytics/class/:classId', (req, res) => {
   try {
     const { classId } = req.params;
@@ -1157,43 +1162,26 @@ router.get('/analytics/class/:classId', (req, res) => {
 
     // 获取班级所有答题记录
     const answers = db.find('answers').filter(a => a.classId === classId);
+    // 待老师批改（status 为 submitted）的提交还没有最终分数，不计入成绩和掌握度统计
+    const gradedAnswers = answers.filter(isGradedAnswer);
 
     // 计算统计数据
     let totalScore = 0;
     let totalCount = 0;
     const knowledgePointStats = {};
-    const studentScores = [];
-    const studentLevels = [];
+    const scoreByStudent = {};
 
-    answers.forEach(answer => {
+    gradedAnswers.forEach(answer => {
       if (answer.totalScore !== undefined) {
         totalScore += answer.totalScore;
         totalCount++;
 
-        const student = db.findById('students', answer.studentId);
-        if (student) {
-          // 计算学生层次
-          let level = 'normal';
-          if (answer.totalScore >= 90) {
-            level = 'strong';
-          } else if (answer.totalScore < 60) {
-            level = 'weak';
-          }
-
-          studentScores.push({
-            studentId: answer.studentId,
-            studentName: student.name,
-            score: answer.totalScore,
-            level
-          });
-
-          studentLevels.push({
-            studentId: answer.studentId,
-            studentName: student.name,
-            level,
-            score: answer.totalScore
-          });
+        // 按学生汇总：同一个学生多次提交只算一行，取平均分
+        if (!scoreByStudent[answer.studentId]) {
+          scoreByStudent[answer.studentId] = { total: 0, count: 0 };
         }
+        scoreByStudent[answer.studentId].total += answer.totalScore;
+        scoreByStudent[answer.studentId].count++;
 
         // 统计知识点
         if (answer.knowledgePointScores) {
@@ -1210,11 +1198,52 @@ router.get('/analytics/class/:classId', (req, res) => {
 
     const avgScore = totalCount > 0 ? (totalScore / totalCount).toFixed(2) : 0;
 
+    // 每个学生一行：平均分与层次（90 分及以上为优秀，60 分以下为薄弱）
+    const studentScores = Object.entries(scoreByStudent)
+      .map(([studentId, stats]) => {
+        const student = db.findById('students', studentId);
+        if (!student) return null;
+        const score = Math.round((stats.total / stats.count) * 10) / 10;
+        const level = score >= 90 ? 'strong' : score < 60 ? 'weak' : 'normal';
+        return { studentId, studentName: student.name, score, level, submissionCount: stats.count };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score);
+    const studentLevels = studentScores.map(item => ({
+      studentId: item.studentId,
+      studentName: item.studentName,
+      level: item.level,
+      score: item.score
+    }));
+
     // 计算知识点掌握度
     const knowledgePointMastery = {};
     Object.entries(knowledgePointStats).forEach(([kp, stats]) => {
       knowledgePointMastery[kp] = (stats.total / stats.count).toFixed(2);
     });
+
+    // 知识点掌握度列表（附名称，按掌握度从低到高）
+    const knowledgePointMasteryList = Object.entries(knowledgePointMastery)
+      .map(([kpId, value]) => {
+        const kp = db.findById('knowledgePoints', kpId);
+        return { id: kpId, name: (kp && kp.name) || kpId, mastery: Number(value) };
+      })
+      .sort((a, b) => a.mastery - b.mastery);
+
+    // 按题型统计错题次数（来自真实答题记录）
+    const QUESTION_TYPE_LABELS = { choice: '选择题', fill: '填空题', judge: '判断题', subjective: '解答题', calculation: '计算题', proof: '证明题' };
+    const errorTypeCounter = {};
+    gradedAnswers.forEach(answer => {
+      (answer.questionResults || []).forEach(result => {
+        if (result.correct) return;
+        const question = db.findById('questions', result.questionId);
+        const type = (question && question.type) || 'other';
+        errorTypeCounter[type] = (errorTypeCounter[type] || 0) + 1;
+      });
+    });
+    const errorTypeStats = Object.entries(errorTypeCounter)
+      .map(([type, count]) => ({ type, label: QUESTION_TYPE_LABELS[type] || '其他', count }))
+      .sort((a, b) => b.count - a.count);
 
     // 统计各层次学生数量
     const levelDistribution = {
@@ -1228,9 +1257,12 @@ router.get('/analytics/class/:classId', (req, res) => {
       data: {
         avgScore,
         studentCount: cls.students.length,
-        completedCount: totalCount,
+        completedCount: answers.length,
+        pendingReviewCount: answers.length - gradedAnswers.length,
         studentScores,
         knowledgePointMastery,
+        knowledgePointMasteryList,
+        errorTypeStats,
         levelDistribution,
         studentLevels
       }
@@ -1250,8 +1282,8 @@ router.get('/analytics/student/:studentId', (req, res) => {
       return res.status(404).json({ success: false, message: '学生不存在' });
     }
 
-    // 获取学生所有答题记录
-    const answers = db.find('answers').filter(a => a.studentId === studentId);
+    // 获取学生所有已批改的答题记录（待批改的提交还没有最终分数，不计入趋势和错题）
+    const answers = db.find('answers').filter(a => a.studentId === studentId && isGradedAnswer(a));
 
     // 计算成绩趋势
     const scoreTrend = answers

@@ -2,7 +2,7 @@
   <div class="admin-users">
     <div class="page-header">
       <h2>用户管理</h2>
-      <p>管理员可通过 Excel 导入班级，学生信息继续通过手动方式维护</p>
+      <p>管理教师和学生账号。班级可以用 Excel 批量导入，学生账号逐个添加。</p>
     </div>
     
     <el-card class="gradient-card import-card">
@@ -78,7 +78,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="email" label="邮箱" />
-        <el-table-column prop="phone" label="电话" width="120" />
+        <el-table-column prop="phone" label="电话" width="150" />
         <el-table-column prop="createdAt" label="创建时间" width="180">
           <template #default="scope">
             {{ formatDate(scope.row.createdAt) }}
@@ -103,7 +103,7 @@
     </el-card>
     
     <el-dialog v-model="dialogVisible" title="编辑用户" width="500px">
-      <el-form ref="formRef" :model="form" label-width="80px">
+      <el-form ref="formRef" :model="form" label-width="104px">
         <el-form-item label="用户名">
           <el-input v-model="form.username" disabled />
         </el-form-item>
@@ -315,7 +315,7 @@ function formatDate(date) {
 
 .import-tip {
   margin: 6px 0 0;
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-secondary);
 }
 

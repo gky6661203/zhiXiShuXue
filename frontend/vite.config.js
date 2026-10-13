@@ -8,14 +8,17 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
-      'three': path.resolve(__dirname, 'node_modules/three/build/three.module.js')
+      '@': path.resolve(__dirname, 'src')
     }
   },
   server: {
     port: 5000,
     strictPort: true,
     host: '0.0.0.0',
+    fs: {
+      // katex 安装在项目根目录的 node_modules，开发模式下需要允许读取上一级目录（否则公式字体 403）
+      allow: [path.resolve(__dirname, '..')]
+    },
     proxy: {
       '/api': {
         target: backendTarget,

@@ -2,7 +2,7 @@
   <div class="grading-center">
     <div class="page-header">
       <h2>批改中心</h2>
-      <p>查看客观题自动结果，并完成主观题手动批改</p>
+      <p>选择题和填空题系统已自动批改，这里只需要批改解答题。</p>
     </div>
 
     <el-card class="gradient-card">
@@ -204,9 +204,9 @@
               <span>满分 {{ item.fullScore || 0 }} 分</span>
             </div>
             <div class="question-line"><span>题型：</span>{{ getTypeText(item.questionType) }}</div>
-            <div class="question-line"><span>题干：</span>{{ item.content || '-' }}</div>
-            <div class="question-line"><span>学生答案：</span>{{ item.studentAnswer || '未作答' }}</div>
-            <div class="question-line"><span>标准答案：</span>{{ item.standardAnswer || '无' }}</div>
+            <div class="question-line"><span>题干：</span><MathText :text="item.content || '-'" /></div>
+            <div class="question-line"><span>学生答案：</span><MathText :text="item.studentAnswer || '未作答'" /></div>
+            <div class="question-line"><span>标准答案：</span><MathText :text="item.standardAnswer || '无'" /></div>
             <div v-if="item.questionType !== 'shortAnswer' && item.questionType !== 'imageUpload'" class="question-line">
               <span>自动判定：</span>
               <el-tag :type="item.correct ? 'success' : 'danger'">{{ item.correct ? '正确' : '错误' }}</el-tag>
@@ -252,6 +252,7 @@
 </template>
 
 <script setup>
+import MathText from '@/components/MathText.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/utils/api'
@@ -483,7 +484,7 @@ function previewImage(imagePath) {
 
 .dialog-summary {
   margin-bottom: 16px;
-  color: #606266;
+  color: var(--nb-ink-2);
   flex-wrap: wrap;
 }
 
@@ -505,7 +506,7 @@ function previewImage(imagePath) {
 .overall-comment-card,
 .question-card {
   padding: 16px;
-  background: #f5f7fa;
+  background: #f5f8ff;
   border-radius: 12px;
 }
 
@@ -520,13 +521,13 @@ function previewImage(imagePath) {
 .preview-card-title {
   font-size: 16px;
   font-weight: 700;
-  color: #303133;
+  color: var(--nb-ink);
 }
 
 .preview-card-desc {
   margin-top: 4px;
-  color: #909399;
-  font-size: 13px;
+  color: var(--nb-ink-3);
+  font-size: 14px;
 }
 
 .paper-preview-frame-wrap {
@@ -560,7 +561,7 @@ function previewImage(imagePath) {
   align-items: center;
   justify-content: center;
   min-height: 420px;
-  background: linear-gradient(135deg, #eef3f8 0%, #f8fafc 100%);
+  background: linear-gradient(135deg, #eef3f8 0%, #f5f8ff 100%);
   border: 1px solid #e3e8ef;
   border-radius: 10px;
   padding: 12px;
@@ -583,19 +584,19 @@ function previewImage(imagePath) {
   flex-direction: column;
   gap: 6px;
   padding: 8px;
-  border: 1px solid #dcdfe6;
+  border: 1px solid var(--nb-line);
   border-radius: 10px;
   background: #fff;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #606266;
+  color: var(--nb-ink-2);
 }
 
 .image-thumb-btn:hover,
 .image-thumb-btn.is-active {
-  border-color: #409eff;
+  border-color: var(--nb-blue);
   box-shadow: 0 8px 20px rgba(64, 158, 255, 0.14);
-  color: #409eff;
+  color: var(--nb-blue);
 }
 
 .image-thumb {
@@ -618,7 +619,7 @@ function previewImage(imagePath) {
 .question-line span,
 .question-score span,
 .question-comment span {
-  color: #909399;
+  color: var(--nb-ink-3);
 }
 
 .question-score {
@@ -638,7 +639,7 @@ function previewImage(imagePath) {
   background: #fff7e6;
   border: 1px solid #ffd591;
   border-radius: 8px;
-  color: #8c5a00;
+  color: var(--nb-orange-ink);
 }
 
 .teacher-note-title {

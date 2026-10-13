@@ -1,79 +1,104 @@
 <template>
   <div class="assignment-detail">
-    <div class="page-header">
-      <h2>{{ viewMode ? '答题结果' : '在线答题' }}</h2>
-      <p>{{ assignmentTitle }}</p>
-    </div>
-    
-    <el-card class="gradient-card" v-loading="loading">
-      <template #header>
-        <div class="card-header">
-          <span>题目列表</span>
-          <div v-if="!viewMode">
-            <el-button type="primary" @click="submitAnswers" :loading="submitting">
-              提交答案
-            </el-button>
-          </div>
-        </div>
-      </template>
-      
-      <div v-for="(question, index) in questions" :key="question.id" class="question-item">
-        <div class="question-header">
-          <span class="question-number">第{{ index + 1 }}题</span>
-          <el-tag>{{ getTypeText(question.type) }}</el-tag>
-          <el-tag type="info">{{ question.score }}分</el-tag>
-        </div>
-        
-        <div class="question-content">{{ question.content }}</div>
-        
-        <div v-if="question.type === 'choice'" class="question-options">
-          <el-radio-group v-model="answers[question.id]" :disabled="viewMode">
-            <el-radio
-              v-for="(opt, optIndex) in question.options"
-              :key="optIndex"
-              :label="String.fromCharCode(65 + optIndex)"
-              class="option-item"
-            >
-              {{ String.fromCharCode(65 + optIndex) }}. {{ opt }}
-            </el-radio>
-          </el-radio-group>
-        </div>
-        
-        <div v-else-if="question.type === 'fill'" class="question-fill">
-          <el-input
-            v-model="answers[question.id]"
-            placeholder="请输入答案"
-            :disabled="viewMode"
-          />
-        </div>
-        
-        <div v-else class="question-short">
-          <el-input
-            v-model="answers[question.id]"
-            type="textarea"
-            :rows="4"
-            placeholder="请输入答案"
-            :disabled="viewMode"
-          />
-        </div>
-        
-        <div v-if="viewMode && hasResult(question.id)" class="answer-result">
-          <div :class="['result-item', getResultCorrect(question.id) ? 'correct' : 'wrong']">
-            <span>你的答案：{{ getAnswer(question.id) }}</span>
-          </div>
-          <div class="correct-answer">
-            标准答案：{{ getCorrectAnswer(question.id) || '待教师批改' }}
-          </div>
-          <div class="score">得分：{{ getScore(question.id) }}/{{ question.score || 0 }}分</div>
-        </div>
+    <div class="page-header detail-header">
+      <div class="header-text">
+        <h2>{{ assignmentTitle }}</h2>
+        <p>{{ viewMode ? '这是你交上去的答卷，红笔是批改结果。' : '一共 ' + questions.length + ' 道题，做完点底部的“交卷”。' }}</p>
       </div>
-      
-      <el-empty v-if="questions.length === 0 && !loading" description="暂无题目" />
-    </el-card>
+      <div v-if="viewMode && hasAnyResult" class="paper-score" :aria-label="'得分 ' + totalScore + ' 分，满分 ' + fullScore + ' 分'">
+        <span class="paper-score-num">{{ totalScore }}</span>
+        <span v-if="totalScore <= fullScore" class="paper-score-full">/ {{ fullScore }}</span>
+      </div>
+    </div>
+
+    <div v-loading="loading" class="paper">
+      <article
+        v-for="(question, index) in questions"
+        :key="question.id"
+        :class="['paper-question', viewMode && hasResult(question.id) ? resultClass(question.id) : '']"
+      >
+        <svg v-if="viewMode && hasResult(question.id) && isGraded(question.id)" class="pen-mark" viewBox="0 0 120 100" aria-hidden="true">
+          <path v-if="getResultCorrect(question.id)" class="pen-stroke" d="M14 56 C 26 64, 36 74, 44 86 C 58 58, 80 30, 110 10" />
+          <template v-else>
+            <path class="pen-stroke" d="M22 18 C 46 40, 70 62, 98 88" />
+            <path class="pen-stroke is-second" d="M98 16 C 74 38, 50 62, 20 86" />
+          </template>
+        </svg>
+
+        <header class="q-head">
+          <span class="q-index">第 {{ index + 1 }} 题</span>
+          <span class="q-meta">{{ getTypeText(question.type) }}</span>
+          <span class="q-meta">{{ question.score || 0 }} 分</span>
+          <span v-if="viewMode && hasResult(question.id) && !isGraded(question.id)" class="q-pending">等老师批改</span>
+        </header>
+
+        <MathText class="q-stem" tag="div" :text="question.content" />
+
+        <div v-if="question.type === 'choice'" class="q-options" role="radiogroup" :aria-label="'第 ' + (index + 1) + ' 题选项'">
+          <label
+            v-for="(opt, optIndex) in question.options"
+            :key="optIndex"
+            :class="['q-option', { 'is-picked': isPicked(question, opt, optIndex) }]"
+          >
+            <input
+              v-model="answers[question.id]"
+              class="q-radio"
+              type="radio"
+              :name="'q-' + question.id"
+              :value="letter(optIndex)"
+              :disabled="viewMode"
+            >
+            <span class="q-letter">{{ letter(optIndex) }}</span>
+            <MathText class="q-option-text" :text="opt" />
+          </label>
+        </div>
+
+        <el-input
+          v-else-if="question.type === 'fill'"
+          v-model="answers[question.id]"
+          class="q-input"
+          placeholder="在这里填答案"
+          :disabled="viewMode"
+        />
+
+        <el-input
+          v-else
+          v-model="answers[question.id]"
+          class="q-input"
+          type="textarea"
+          :rows="4"
+          placeholder="写下你的解题过程和答案"
+          :disabled="viewMode"
+        />
+
+        <dl v-if="viewMode && hasResult(question.id)" class="q-answers">
+          <div>
+            <dt>你的答案</dt>
+            <dd :class="{ 'is-miss-text': isGraded(question.id) && !getResultCorrect(question.id) }"><MathText :text="getAnswer(question.id)" /></dd>
+          </div>
+          <div v-if="getCorrectAnswer(question.id)">
+            <dt>正确答案</dt>
+            <dd class="is-answer-text"><MathText :text="getCorrectAnswer(question.id)" /></dd>
+          </div>
+          <div>
+            <dt>得分</dt>
+            <dd><b class="nb-num">{{ getScore(question.id) }}</b><template v-if="getScore(question.id) <= (question.score || 0)"> / {{ question.score || 0 }}</template> 分</dd>
+          </div>
+        </dl>
+      </article>
+
+      <el-empty v-if="questions.length === 0 && !loading" description="这份作业里还没有题目。" />
+
+      <div v-if="!viewMode && questions.length" class="submit-bar">
+        <span class="submit-progress">已答 <b class="nb-num">{{ answeredCount }}</b> / <span class="nb-num">{{ questions.length }}</span> 题</span>
+        <el-button type="primary" size="large" :loading="submitting" @click="submitAnswers">交卷</el-button>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
+import MathText from '@/components/MathText.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -184,7 +209,7 @@ function loadResults() {
       fillResults(res.data.questions || [])
     }
   }).catch(function() {
-    ElMessage.warning('暂无答题结果')
+    ElMessage.warning('还没有这份作业的答题记录')
   })
 }
 
@@ -198,18 +223,18 @@ function submitAnswers() {
   }
   
   if (answeredCount === 0) {
-    ElMessage.warning('请至少回答一道题目')
+    ElMessage.warning('一道题都还没做，先答几道再交卷')
     return
   }
   
-  ElMessageBox.confirm('确定提交答案吗？已答' + answeredCount + '/' + questions.value.length + '题', '提示').then(function() {
+  ElMessageBox.confirm('已答 ' + answeredCount + ' / ' + questions.value.length + ' 题，交卷后就不能再改了。', '交卷', { confirmButtonText: '交卷', cancelButtonText: '再检查一下' }).then(function() {
     submitting.value = true
     
     api.post('/student/assignments/' + route.params.id + '/submit', {
       answers: answers
     }).then(function(res) {
       if (res.success) {
-        ElMessage.success('提交成功')
+        ElMessage.success('已交卷')
         if (res.data && res.data.answerId) {
           sessionStorage.setItem('latest-answer-' + route.params.id, res.data.answerId)
         }
@@ -225,78 +250,127 @@ function submitAnswers() {
 }
 
 function getTypeText(type) {
-  var map = { choice: '选择题', fill: '填空题', shortAnswer: '简答题' }
-  return map[type] || '未知'
+  var map = { choice: '选择题', fill: '填空题', shortAnswer: '解答题', subjective: '解答题' }
+  return map[type] || '解答题'
 }
+
+// 交卷后服务器存的可能是选项字母，也可能是选项原文
+function isPicked(question, option, index) {
+  var value = String(answers[question.id] || '').trim()
+  return !!value && (value === letter(index) || value === String(option).trim())
+}
+
+function letter(index) {
+  return String.fromCharCode(65 + index)
+}
+
+// 有标准答案的题才算批改完；主观题要等老师批改
+function isGraded(questionId) {
+  return !!getCorrectAnswer(questionId)
+}
+
+function resultClass(questionId) {
+  if (!isGraded(questionId)) return 'is-pending'
+  return getResultCorrect(questionId) ? 'is-right' : 'is-wrong'
+}
+
+var answeredCount = computed(function() {
+  return questions.value.filter(function(q) { return String(answers[q.id] || '').trim() }).length
+})
+
+var hasAnyResult = computed(function() {
+  return Object.keys(results).length > 0
+})
+
+var totalScore = computed(function() {
+  return questions.value.reduce(function(sum, q) { return sum + (Number(getScore(q.id)) || 0) }, 0)
+})
+
+var fullScore = computed(function() {
+  return questions.value.reduce(function(sum, q) { return sum + (Number(q.score) || 0) }, 0)
+})
 </script>
 
 <style scoped>
-.question-item {
-  margin-bottom: 24px;
-  padding: 20px;
-  background: #f5f7fa;
-  border-radius: 8px;
+.assignment-detail { display: flex; flex-direction: column; gap: 20px; max-width: 900px; }
+.detail-header { display: flex !important; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.header-text { min-width: 0; }
+
+/* 卷面总分：红笔手写 */
+.paper-score { flex-shrink: 0; display: flex; align-items: baseline; gap: 4px; transform: rotate(-6deg); }
+.paper-score-num { font-family: var(--nb-font-hand); font-weight: 700; font-size: 76px; line-height: 0.9; color: var(--nb-red-ink); }
+.paper-score-full { font-family: var(--nb-font-hand); font-weight: 700; font-size: 28px; color: var(--nb-red-ink); }
+
+.paper { display: flex; flex-direction: column; gap: 14px; }
+.paper-question {
+  position: relative;
+  padding: 20px 22px 22px;
+  background: var(--nb-sheet);
+  border: 1px solid var(--nb-line);
+  border-radius: var(--nb-radius);
+  box-shadow: var(--nb-shadow);
 }
 
-.question-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
-}
+.q-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; padding-right: 72px; }
+.q-index { font-family: var(--nb-font-display); font-size: 19px; color: var(--nb-blue); }
+.q-meta { padding: 1px 8px; border-radius: 5px; background: #f1f4f9; color: var(--nb-ink-3); font-size: 14px; }
+.q-pending { padding: 1px 8px; border-radius: 5px; background: var(--nb-orange-soft); color: var(--nb-orange-ink); font-size: 14px; font-weight: 700; }
+.q-stem { margin-top: 10px; padding-right: 72px; font-size: 16px; line-height: 1.8; color: var(--nb-ink); }
 
-.question-number {
-  font-size: 16px;
-  font-weight: bold;
+.q-options { margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.q-option {
+  position: relative; display: flex; align-items: center; gap: 12px; min-height: 48px;
+  padding: 8px 14px 8px 10px; border: 1.5px solid var(--nb-line); border-radius: 10px;
+  background: var(--nb-sheet); cursor: pointer; transition: border-color .15s ease, background-color .15s ease;
 }
-
-.question-content {
-  margin-bottom: 16px;
-  line-height: 1.6;
+.q-option:hover { border-color: var(--nb-line-strong); background: #f8fafd; }
+.q-option.is-picked { border-color: var(--nb-blue); background: var(--nb-blue-soft); }
+.q-option:has(.q-radio:focus-visible) { outline: 2px solid var(--nb-blue); outline-offset: 2px; }
+.q-option:has(.q-radio:disabled) { cursor: default; }
+.q-radio { position: absolute; opacity: 0; pointer-events: none; }
+.q-letter {
+  width: 30px; height: 30px; flex-shrink: 0; display: grid; place-items: center; border-radius: 50%;
+  border: 1.5px solid var(--nb-line-strong); font-family: var(--nb-font-num); font-weight: 700; font-size: 14px; color: var(--nb-ink-2);
 }
+.q-option.is-picked .q-letter { border-color: var(--nb-blue); background: var(--nb-blue); color: #fff; }
+.is-wrong .q-option.is-picked { border-color: var(--nb-red); background: var(--nb-red-soft); }
+.is-wrong .q-option.is-picked .q-letter { border: 2px solid var(--nb-red); background: transparent; color: var(--nb-red-ink); transform: rotate(-8deg) scale(1.08); }
+.is-right .q-option.is-picked { border-color: var(--nb-green); background: var(--nb-green-soft); }
+.is-right .q-option.is-picked .q-letter { border-color: var(--nb-green); background: var(--nb-green); }
+.q-option-text { flex: 1; min-width: 0; font-size: 15px; color: var(--nb-ink); }
+.q-input { margin-top: 14px; }
 
-.question-options {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.q-answers { margin: 16px 0 0; padding-top: 12px; border-top: 1px dashed var(--nb-line-strong); display: flex; flex-direction: column; gap: 6px; }
+.q-answers > div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 8px; }
+.q-answers dt { color: var(--nb-ink-3); font-size: 14px; line-height: 1.8; }
+.q-answers dd { margin: 0; color: var(--nb-ink); font-size: 15px; line-height: 1.7; }
+.q-answers .is-miss-text { color: var(--nb-ink-2); text-decoration: line-through; text-decoration-color: var(--nb-red); text-decoration-thickness: 2px; }
+.q-answers .is-answer-text { color: var(--nb-red-ink); font-weight: 700; }
+
+.pen-mark { position: absolute; top: 10px; right: 14px; width: 76px; height: 64px; overflow: visible; pointer-events: none; }
+.pen-stroke {
+  fill: none; stroke: var(--nb-red); stroke-width: 9; stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 200; stroke-dashoffset: 200; animation: pen-draw .45s cubic-bezier(.6, 0, .3, 1) forwards;
 }
+.pen-stroke.is-second { animation-delay: .3s; }
+@keyframes pen-draw { to { stroke-dashoffset: 0; } }
 
-.option-item {
-  display: flex;
-  padding: 12px;
-  background: white;
-  border-radius: 4px;
+.submit-bar {
+  position: sticky; bottom: 16px; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px 12px 20px; background: var(--nb-sheet); border: 1px solid var(--nb-line-strong); border-radius: 12px;
+  box-shadow: 0 16px 30px -18px rgba(28, 37, 65, .45);
 }
+.submit-progress { color: var(--nb-ink-2); font-size: 14px; }
+.submit-progress b { color: var(--nb-ink); font-size: 18px; }
 
-.answer-result {
-  margin-top: 16px;
-  padding: 16px;
-  background: white;
-  border-radius: 8px;
+@media (max-width: 640px) {
+  .detail-header { flex-direction: column; align-items: flex-start; }
+  .paper-question { padding: 16px 16px 18px; }
+  .pen-mark { width: 56px; height: 48px; }
+  .q-head, .q-stem { padding-right: 52px; }
+  .q-answers > div { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }
-
-.result-item {
-  padding: 8px;
-  border-radius: 4px;
-}
-
-.result-item.correct {
-  background: #f0f9ff;
-  color: #67C23A;
-}
-
-.result-item.wrong {
-  background: #fef0f0;
-  color: #F56C6C;
-}
-
-.correct-answer {
-  margin-top: 8px;
-  color: #67C23A;
-}
-
-.score {
-  margin-top: 8px;
-  font-weight: bold;
+@media (prefers-reduced-motion: reduce) {
+  .pen-stroke { animation: none; stroke-dashoffset: 0; }
 }
 </style>

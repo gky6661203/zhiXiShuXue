@@ -9,7 +9,6 @@ const { getPersonalizedPush, ensureDemoWrongHistory, getColorStatus } = require(
 const { gradeAnswer } = require('../services/autoGrade');
 const { updateMastery, getTrend } = require('../services/masteryEngine');
 const { buildMistakeTags, normalizeErrorType } = require('../services/mistakeTagging');
-const { askAiTutor, validateQuestion, normalizeTutorMode, getTutorConfigStatus } = require('../services/ai-tutor');
 const { DEMO_GRAPH, CURATED_NODE_SET } = require('../services/knowledge-graph');
 const KP_ALIAS_MAP = {
   'kp-001': 'alg-1', 'kp-002': 'alg-2', 'kp-003': 'alg-3', 'kp-004': 'alg-1', 'kp-005': 'alg-5',
@@ -65,6 +64,64 @@ router.post('/practice/:knowledgePointId/submit', (req, res) => { try { const s 
 router.get('/learning-track', (req, res) => { try { const s = S(req.headers['x-user-id']); if (!s) return res.status(404).json({ success: false, message: '学生不存在' }); const data = trackList(s.id), stats = { homeworkCount: data.filter(x => x.recordType === 'homework').length, practiceCount: data.filter(x => x.recordType === 'practice').length, latestScore: data[0] ? +data[0].score || 0 : 0, averageCorrectRate: data.length ? Math.round(data.reduce((sum, x) => sum + (+x.correctRate || 0), 0) / data.length) : 0 }; res.json({ success: true, data, stats }) } catch (e) { res.status(500).json({ success: false, message: e.message }) } });
 router.get('/learning-track/:id/detail', (req, res) => { try { const s = S(req.headers['x-user-id']); if (!s) return res.status(404).json({ success: false, message: '学生不存在' }); const data = trackDetail(s.id, req.params.id, req.query.type); if (!data) return res.status(404).json({ success: false, message: '记录不存在' }); res.json({ success: true, data }) } catch (e) { res.status(500).json({ success: false, message: e.message }) } });
 router.get('/knowledge-point/:id/detail', (req, res) => { try { const s = S(req.headers['x-user-id']); if (!s) return res.status(404).json({ success: false, message: '学生不存在' }); const targetId = KP_ALIAS_MAP[req.params.id] || req.params.id; const meta = resolveKnowledgeMeta(req.params.id); ensureDemoWrongHistory(s.id); const wrongQuestions = wrongs(s.id).filter(x => x.knowledgePointId === req.params.id || x.knowledgePointId === targetId).slice(0, 20).map((item, index) => ({ ...item, displayIndex: index + 1, visibleQuestionNo: `错题${index + 1}` })); const pack = getPersonalizedPush(s.id, { limit: 3 }); const recommendedQuestions = (pack.questions || []).filter(x => x.knowledgePointId === req.params.id || x.knowledgePointId === targetId).slice(0, 3).map((item, index) => ({ ...item, displayIndex: index + 1, visibleQuestionNo: `推荐题${index + 1}` })); res.json({ success: true, data: { knowledgePoint: { name: meta.name, description: meta.description || '', statusLabel: (weak(s.id).find(item => item.id === req.params.id || item.id === targetId) || {}).statusLabel || '待巩固', masteryRate: (weak(s.id).find(item => item.id === req.params.id || item.id === targetId) || {}).masteryRate || 0 }, wrongQuestions, recommendedQuestions, recommendationText: chat(s.id, req.params.id).openingMessage } }) } catch (e) { res.status(500).json({ success: false, message: e.message }) } });
-router.get('/ai-tutor/status', (req, res) => { try { const s = S(req.headers['x-user-id']); if (!s) return res.status(404).json({ success: false, message: '学生不存在' }); res.json({ success: true, data: getTutorConfigStatus() }) } catch (e) { res.status(500).json({ success: false, message: e.message || 'AI助教配置检测失败' }) } });
-router.post('/ai-tutor/chat', async (req, res) => { try { const s = S(req.headers['x-user-id']); if (!s) return res.status(404).json({ success: false, message: '学生不存在' }); const question = String(req.body.question || '').trim(); const mode = normalizeTutorMode(req.body.mode); const validation = validateQuestion(question, mode); if (!validation.valid) return res.status(400).json({ success: false, message: validation.reason, code: 'INVALID_TUTOR_QUESTION' }); const history = Array.isArray(req.body.history) ? req.body.history.slice(-8) : []; const answer = await askAiTutor(history, question, mode); res.json({ success: true, data: { role: 'assistant', content: answer.content, isProblem: answer.isProblem, mode: mode, scope: 'junior-math' } }) } catch (e) { const isTimeout = e.code === 'ECONNABORTED'; res.status(isTimeout ? 504 : 500).json({ success: false, message: isTimeout ? 'AI助教响应超时，请稍后重试' : (e.message || 'AI助教暂时不可用') }) } });
+// 个人信息：学号、姓名、性别和所在班级
+function profileOf(student) {
+  const cls = student.classId ? db.findById('classes', student.classId) : null;
+  return {
+    id: student.id,
+    studentNo: student.studentNo || '',
+    name: student.name || '',
+    gender: student.gender || 'male',
+    classId: student.classId || null,
+    class: cls ? { id: cls.id, name: cls.name } : null
+  };
+}
+
+router.get('/profile', (req, res) => {
+  try {
+    const s = S(req.headers['x-user-id']);
+    if (!s) return res.status(404).json({ success: false, message: '学生不存在' });
+    res.json({ success: true, data: profileOf(s) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.put('/profile', (req, res) => {
+  try {
+    const s = S(req.headers['x-user-id']);
+    if (!s) return res.status(404).json({ success: false, message: '学生不存在' });
+    const name = String(req.body.name || '').trim();
+    if (!name) return res.status(400).json({ success: false, message: '姓名不能为空' });
+    const gender = req.body.gender === 'female' ? 'female' : 'male';
+    db.updateById('students', s.id, { name, gender });
+    const user = db.findById('users', s.userId || s.id);
+    if (user) db.updateById('users', user.id, { name });
+    res.json({ success: true, message: '已保存', data: profileOf(db.findById('students', s.id)) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+router.post('/bind-class', (req, res) => {
+  try {
+    const s = S(req.headers['x-user-id']);
+    if (!s) return res.status(404).json({ success: false, message: '学生不存在' });
+    const cls = db.findById('classes', req.body.classId);
+    if (!cls) return res.status(404).json({ success: false, message: '班级不存在' });
+    if (s.classId && s.classId !== cls.id) {
+      const oldCls = db.findById('classes', s.classId);
+      if (oldCls && Array.isArray(oldCls.students)) {
+        db.updateById('classes', oldCls.id, { students: oldCls.students.filter(id => id !== s.id) });
+      }
+    }
+    const members = Array.isArray(cls.students) ? cls.students : [];
+    if (!members.includes(s.id)) db.updateById('classes', cls.id, { students: members.concat(s.id) });
+    db.updateById('students', s.id, { classId: cls.id });
+    res.json({ success: true, message: '已加入班级', data: profileOf(db.findById('students', s.id)) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 module.exports = router;

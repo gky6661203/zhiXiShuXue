@@ -4,6 +4,7 @@ const { updateMastery } = require('../services/masteryEngine')
 const { seedDemoData } = require('../seed/demo_data')
 const { getKnowledgeGraph, getWrongQuestionsByKnowledge, getRecommendQuestionsByKnowledge } = require('../services/knowledge-graph')
 const db = require('../database/memory-db')
+const knowledgeTree = require('../../shared/knowledge-tree.json')
 
 describe('recommendation factors', () => {
   test('jaccard works', () => {
@@ -40,8 +41,11 @@ describe('mastery state machine', () => {
 describe('knowledge graph demo data', () => {
   test('seed and query graph data', () => {
     seedDemoData()
-    const graph = getKnowledgeGraph({ page: 1, pageSize: 100 })
-    expect(graph.total).toBeGreaterThanOrEqual(20)
+    const expectedNodeIds = knowledgeTree.categories.flatMap(category => category.nodes.map(node => node.id))
+    expect(expectedNodeIds.length).toBeGreaterThan(0)
+    const graph = getKnowledgeGraph({ page: 1, pageSize: 500 })
+    expect(graph.total).toBe(expectedNodeIds.length)
+    expect(graph.data.map(node => node.id).sort()).toEqual(expectedNodeIds.slice().sort())
     expect(getWrongQuestionsByKnowledge('alg-1').length).toBeGreaterThanOrEqual(5)
     expect(getRecommendQuestionsByKnowledge('alg-1').length).toBeGreaterThanOrEqual(3)
   })

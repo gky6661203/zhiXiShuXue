@@ -52,6 +52,26 @@ export function getMasteryStatus(value) {
   return 'weak'
 }
 
+// 全站统一的三档掌握状态：薄弱 / 待巩固 / 已掌握。
+// 后端部分接口仍返回“待强化”“学习中”“未掌握”等旧说法，在这里统一换算。
+export const MASTERY_LABELS = ['薄弱', '待巩固', '已掌握']
+
+export function normalizeStatusLabel(label, masteryRate) {
+  var text = String(label || '').trim()
+  if (text === '已掌握') return '已掌握'
+  if (text === '待巩固' || text === '学习中') return '待巩固'
+  if (text === '薄弱' || text === '待强化' || text === '未掌握') return '薄弱'
+  if (masteryRate !== undefined && masteryRate !== null && masteryRate !== '') return getMasteryLabel(masteryRate)
+  return '薄弱'
+}
+
+export function statusTagType(label) {
+  var text = normalizeStatusLabel(label)
+  if (text === '已掌握') return 'success'
+  if (text === '待巩固') return 'warning'
+  return 'danger'
+}
+
 export function getMasteryLabel(value) {
   const status = getMasteryStatus(value)
   if (status === 'mastered') return '已掌握'
