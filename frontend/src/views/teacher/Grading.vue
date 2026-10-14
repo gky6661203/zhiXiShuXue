@@ -2,7 +2,7 @@
   <div class="grading-center">
     <div class="page-header">
       <h2>批改中心</h2>
-      <p>选择题和填空题系统已自动批改，这里只需要批改解答题。</p>
+      <p>查看作业答卷和历史评分。解答题、图片作答和专项练习请进入复核与纠错。</p><el-button type="primary" @click="$router.push('/teacher/review-center')">进入复核与纠错</el-button>
     </div>
 
     <el-card class="gradient-card">

@@ -5,12 +5,15 @@
         <h2>{{ assignmentTitle }}</h2>
         <p>{{ viewMode ? '这是你交上去的答卷，红笔是批改结果。' : '一共 ' + questions.length + ' 道题，做完点底部的“交卷”。' }}</p>
       </div>
-      <div v-if="viewMode && hasAnyResult" class="paper-score" :aria-label="'得分 ' + totalScore + ' 分，满分 ' + fullScore + ' 分'">
+      <div v-if="viewMode && hasAnyResult" class="paper-score" :aria-label="(pendingResults ? '暂计得分 ' : '得分 ') + totalScore + ' 分，满分 ' + fullScore + ' 分'">
+        <span v-if="pendingResults" class="q-pending">暂计</span>
         <span class="paper-score-num">{{ totalScore }}</span>
         <span v-if="totalScore <= fullScore" class="paper-score-full">/ {{ fullScore }}</span>
       </div>
     </div>
 
+    <a v-if="paper?.filePath" :href="paper.filePath" target="_blank" rel="noopener">查看试卷附件；请将手写解答拍照上传</a>
+    <div v-if="viewMode && answerRecord?.images?.length"><img v-for="image in answerRecord.images" :key="image" :src="image" alt="已提交的手写解答" style="max-width:100%;max-height:320px" /><p v-if="answerRecord.status === 'submitted'">图片作答等待老师复核。</p><p v-if="answerRecord.comments?.__image_review__">老师反馈：{{ answerRecord.comments.__image_review__ }}</p></div>
     <div v-loading="loading" class="paper">
       <article
         v-for="(question, index) in questions"
@@ -33,6 +36,8 @@
         </header>
 
         <MathText class="q-stem" tag="div" :text="question.content" />
+        <QuestionTools :question="question" :answered="viewMode" />
+        <img v-if="question.imageUrl" :src="question.imageUrl" alt="题目附图" style="max-width:100%;max-height:300px" />
 
         <div v-if="question.type === 'choice'" class="q-options" role="radiogroup" :aria-label="'第 ' + (index + 1) + ' 题选项'">
           <label
@@ -82,14 +87,16 @@
           </div>
           <div>
             <dt>得分</dt>
-            <dd><b class="nb-num">{{ getScore(question.id) }}</b><template v-if="getScore(question.id) <= (question.score || 0)"> / {{ question.score || 0 }}</template> 分</dd>
+            <dd v-if="results[question.id]?.needsReview">等待老师复核</dd>
+            <dd v-else><b class="nb-num">{{ getScore(question.id) }}</b><template v-if="getScore(question.id) <= (question.score || 0)"> / {{ question.score || 0 }}</template> 分</dd>
           </div>
         </dl>
       </article>
 
       <el-empty v-if="questions.length === 0 && !loading" description="这份作业里还没有题目。" />
 
-      <div v-if="!viewMode && questions.length" class="submit-bar">
+      <div v-if="!viewMode" class="answer-upload"><p>{{ draft.status.value || '作答会自动保存' }}</p><label>上传手写解答（PNG 或 JPEG，最大 5 MB）<input type="file" accept="image/png,image/jpeg" @change="uploadAnswer" /></label><img v-for="image in images" :key="image" :src="image" alt="手写作答预览" style="max-width:200px;max-height:180px" /></div>
+      <div v-if="!viewMode && (questions.length || paper?.filePath)" class="submit-bar">
         <span class="submit-progress">已答 <b class="nb-num">{{ answeredCount }}</b> / <span class="nb-num">{{ questions.length }}</span> 题</span>
         <el-button type="primary" size="large" :loading="submitting" @click="submitAnswers">交卷</el-button>
       </div>
@@ -99,10 +106,12 @@
 
 <script setup>
 import MathText from '@/components/MathText.vue'
+import QuestionTools from '@/components/QuestionTools.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/api'
+import { useAnswerDraft } from '@/composables/useAnswerDraft'
 
 var route = useRoute()
 var router = useRouter()
@@ -110,9 +119,14 @@ var loading = ref(false)
 var submitting = ref(false)
 
 var assignment = ref(null)
+const paper = ref(null)
+const answerRecord = ref(null)
 var questions = ref([])
 var answers = reactive({})
 var results = reactive({})
+const images = ref([])
+const draft = useAnswerDraft(computed(() => 'assignment-' + route.params.id), answers, questions, images)
+const startedAt = Date.now()
 
 var viewMode = computed(function() {
   return route.query.view === 'result'
@@ -178,7 +192,9 @@ function loadAssignment() {
   api.get('/student/assignments/' + assignmentId + '/questions').then(function(res) {
     if (res.success) {
       assignment.value = res.data.assignment
+      paper.value = res.data.paper || null
       questions.value = res.data.questions || []
+      if (!viewMode.value) draft.restore()
       
       if (viewMode.value) {
         loadResults()
@@ -192,7 +208,7 @@ function loadAssignment() {
 }
 
 function loadResults() {
-  var cachedAnswerId = sessionStorage.getItem('latest-answer-' + route.params.id)
+  var cachedAnswerId = sessionStorage.getItem('latest-answer-' + JSON.parse(localStorage.getItem('user') || '{}').id + '-' + route.params.id)
   var request = cachedAnswerId
     ? Promise.resolve({ success: true, data: { answerId: cachedAnswerId } })
     : api.get('/student/assignments/' + route.params.id + '/latest-answer')
@@ -206,6 +222,7 @@ function loadResults() {
     return api.get('/student/answers/' + answerId)
   }).then(function(res) {
     if (res.success) {
+      answerRecord.value = res.data
       fillResults(res.data.questions || [])
     }
   }).catch(function() {
@@ -222,18 +239,22 @@ function submitAnswers() {
     }
   }
   
-  if (answeredCount === 0) {
+  if (answeredCount === 0 && !images.value.length) {
     ElMessage.warning('一道题都还没做，先答几道再交卷')
     return
   }
   
-  ElMessageBox.confirm('已答 ' + answeredCount + ' / ' + questions.value.length + ' 题，交卷后就不能再改了。', '交卷', { confirmButtonText: '交卷', cancelButtonText: '再检查一下' }).then(function() {
+  ElMessageBox.confirm((questions.value.length ? '已答 ' + answeredCount + ' / ' + questions.value.length + ' 题' : '将提交 ' + images.value.length + ' 张作答图片') + '，交卷后就不能再改了。', '交卷', { confirmButtonText: '交卷', cancelButtonText: '再检查一下' }).then(function() {
     submitting.value = true
     
     api.post('/student/assignments/' + route.params.id + '/submit', {
-      answers: answers
+      answers: answers,
+      images: images.value,
+      requestId: draft.requestId.value,
+      costTime: Math.round((Date.now() - startedAt) / 1000)
     }).then(function(res) {
       if (res.success) {
+        draft.clear()
         ElMessage.success('已交卷')
         if (res.data && res.data.answerId) {
           sessionStorage.setItem('latest-answer-' + route.params.id, res.data.answerId)
@@ -247,6 +268,12 @@ function submitAnswers() {
       submitting.value = false
     })
   }).catch(function() {})
+}
+
+async function uploadAnswer(event) {
+  const file = event.target.files?.[0]; if (!file) return;
+  const data = new FormData(); data.append('file', file);
+  try { const res = await api.post('/student/answers/upload', data); images.value.push(res.data.filePath) } catch (error) { ElMessage.error(error.response?.data?.message || '上传失败') }
 }
 
 function getTypeText(type) {
@@ -266,7 +293,7 @@ function letter(index) {
 
 // 有标准答案的题才算批改完；主观题要等老师批改
 function isGraded(questionId) {
-  return !!getCorrectAnswer(questionId)
+  return !results[questionId]?.needsReview && !!getCorrectAnswer(questionId)
 }
 
 function resultClass(questionId) {
@@ -279,14 +306,17 @@ var answeredCount = computed(function() {
 })
 
 var hasAnyResult = computed(function() {
-  return Object.keys(results).length > 0
+  return Object.keys(results).length > 0 || !!answerRecord.value
 })
 
+const pendingResults = computed(() => answerRecord.value?.status === 'submitted' || Object.values(results).some(result => result.needsReview))
 var totalScore = computed(function() {
+  if (answerRecord.value) return answerRecord.value.totalScore
   return questions.value.reduce(function(sum, q) { return sum + (Number(getScore(q.id)) || 0) }, 0)
 })
 
 var fullScore = computed(function() {
+  if (!questions.value.length) return (answerRecord.value?.questionResults || []).reduce((sum,item) => sum + (item.fullScore || 0), 0) || 100
   return questions.value.reduce(function(sum, q) { return sum + (Number(q.score) || 0) }, 0)
 })
 </script>

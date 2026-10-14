@@ -1,7 +1,7 @@
 <template>
   <div class="admin-users">
     <div class="page-header">
-      <h2>用户管理</h2>
+      <h2>用户管理</h2><AccountCreate @created="loadUsers" />
       <p>管理教师和学生账号。班级可以用 Excel 批量导入，学生账号逐个添加。</p>
     </div>
     
@@ -123,6 +123,7 @@
         <el-form-item label="电话">
           <el-input v-model="form.phone" />
         </el-form-item>
+      <el-form-item label="停用账号"><el-switch v-model="form.disabled" /></el-form-item><el-form-item label="重设密码"><el-input v-model="form.newPassword" show-password placeholder="留空则保留原密码" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -136,6 +137,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/api'
+import AccountCreate from '@/components/AccountCreate.vue'
 import dayjs from 'dayjs'
 
 var loading = ref(false)
@@ -242,6 +244,8 @@ function downloadTemplate() {
 }
 
 function editUser(row) {
+  form.disabled = !!row.disabled
+  form.newPassword = ''
   form.id = row.id
   form.username = row.username
   form.name = row.name

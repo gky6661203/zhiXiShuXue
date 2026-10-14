@@ -16,7 +16,7 @@
       </div>
     </header>
 
-    <el-empty v-if="!loading && !questions.length" description="恭喜！当前暂无新的补练题目" />
+    <el-empty v-if="!loading && !questions.length" :description="emptyReason" />
 
     <div v-else v-loading="loading" class="practice-list">
       <div v-for="(item, index) in questions" :key="item.id" class="practice-item">
@@ -30,6 +30,7 @@
       </div>
 
       <div class="submit-bar">
+        <span>{{ draft.status.value || '作答会自动保存' }}</span>
         <span class="submit-progress">已答 <b class="nb-num">{{ answeredTotal }}</b> / <span class="nb-num">{{ questions.length }}</span> 题</span>
         <el-button v-if="!submitted" type="primary" size="large" :loading="submitting" @click="submitBatch">交卷批改</el-button>
         <el-button v-else type="primary" size="large" @click="confirmNextBatch">{{ nextButtonText }}</el-button>
@@ -45,7 +46,7 @@
             <path d="M14 16 C 60 11, 108 12, 150 14" />
           </svg>
         </div>
-        <p class="batch-score-text">本页正确率 {{ batchSummary.accuracy }}%，一共 {{ batchSummary.total }} 题。</p>
+        <p class="batch-score-text">已自动判定题目正确率 {{ batchSummary.accuracy }}%，共 {{ batchSummary.total }} 题；解答题等待教师复核。</p>
       </div>
       <div class="batch-knowledge-list">
         <div v-for="item in batchSummary.knowledgePoints" :key="item.name" class="batch-knowledge-item">
@@ -66,6 +67,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '@/utils/api'
+import { useAnswerDraft } from '@/composables/useAnswerDraft'
 import QuestionCard from '@/components/QuestionCard.vue'
 import { KNOWLEDGE_TREE_SHARED_CONFIG } from '@/utils/knowledge-meta'
 
@@ -87,10 +89,13 @@ const nextButtonText = computed(() => {
 const loading = ref(false)
 const submitting = ref(false)
 const batchDialogVisible = ref(false)
+const emptyReason = ref('当前没有可用题目，请先完成班级已学范围设置。')
 const questions = ref([])
 const answers = ref({})
 const answeredTotal = computed(() => questions.value.filter(item => String(answers.value[item.id] || '').trim()).length)
 const results = ref({})
+const draft = useAnswerDraft(computed(() => 'practice-' + (route.query.kpId || 'custom') + '-' + (route.query.questionId || '')), answers, questions)
+const startedAt = Date.now()
 // 知识点编号 → 名称（后端有时只返回编号）
 const KP_NAME = KNOWLEDGE_TREE_SHARED_CONFIG.categories.reduce((acc, category) => {
   category.nodes.forEach(node => { acc[node.id] = node.name })
@@ -125,22 +130,26 @@ function resetAnswers() {
   Object.keys(results.value).forEach(key => delete results.value[key])
 }
 
-function loadRecommendations(refresh) {
+async function loadRecommendations(refresh) {
+  draft.pause()
+  const saved = !refresh ? await draft.read() : null
+  if (refresh) await draft.clear()
   loading.value = true
   resetAnswers()
   practiceMeta.knowledgePointId = route.query.kpId || ''
   practiceMeta.mode = route.query.questionId || route.query.mode === 'wrong-redo' ? 'wrong-question' : 'weak-point'
   practiceMeta.title = practiceMeta.mode === 'wrong-question' ? '错题重做' : '薄弱补练'
 
-  if (route.query.questionId || route.query.questionIds || route.query.kpId) {
+  if (route.query.questionId || route.query.questionIds || route.query.kpId || saved?.questionIds?.length) {
     api.get(`/student/practice/${practiceMeta.knowledgePointId || 'custom'}`, {
       questionId: route.query.questionId,
-      questionIds: route.query.questionIds,
+      questionIds: route.query.questionIds || saved?.questionIds?.join(','),
       mode: route.query.mode
     }).then(res => {
       if (res.success) {
         const data = res.data || {}
         questions.value = data.questions || []
+        draft.restore(saved)
         if (data.title) practiceMeta.title = data.title
         if (data.mode) practiceMeta.mode = data.mode
         if (!questions.value.length && practiceMeta.knowledgePointId) {
@@ -158,7 +167,7 @@ function loadRecommendations(refresh) {
 
   api.student.getRecommendations({ limit: 3, refresh: refresh ? 'true' : 'false' })
     .then(res => {
-      if (res.success) questions.value = res.data || []
+      if (res.success) { questions.value = res.data || []; draft.restore(saved); emptyReason.value = res.message || '当前没有可用题目，请选择已学知识点或联系老师补充审核题目。' }
     })
     .finally(() => {
       loading.value = false
@@ -180,24 +189,28 @@ function submitBatch() {
     }, {}),
     questionIds: filledIds,
     mode: practiceMeta.mode,
-    title: practiceMeta.title
+    title: practiceMeta.title,
+    requestId: draft.requestId.value,
+    costTime: Math.round((Date.now() - startedAt) / 1000)
   }).then(res => {
     if (res.success) {
       const data = res.data || {}
+      draft.clear()
       ;(data.questionResults || []).forEach(item => {
         results.value[item.questionId] = {
-          isCorrect: !!item.correct,
+          isCorrect: item.correct,
+          needsReview: item.needsReview,
           userAnswer: item.answer || '',
           correctAnswer: item.correctAnswer || '-'
         }
       })
-      const total = (data.questionResults || []).length
+      const total = (data.questionResults || []).filter(item => !item.needsReview).length
       const correct = (data.questionResults || []).filter(item => item.correct).length
       batchSummary.accuracy = total ? Math.round(correct / total * 100) : 0
       batchSummary.total = total
       batchSummary.knowledgePoints = (data.knowledgePointChanges || []).map(item => ({
         name: KP_NAME[item.knowledgePointName] || KP_NAME[item.knowledgePointId] || item.knowledgePointName,
-        label: `答对 ${item.correctCount}/${item.questionCount}` + (item.masteryAfter !== undefined ? `，掌握度 ${Math.round(item.masteryAfter)}%` : ''),
+        label: `答对 ${item.correctCount}/${item.questionCount}` + (item.masteryAfter !== undefined && item.masteryAfter !== null ? `，掌握度 ${Math.round(item.masteryAfter)}%` : ''),
         type: item.masteryAfter >= 80 ? 'success' : item.masteryAfter >= 60 ? 'warning' : 'danger'
       }))
       batchDialogVisible.value = true

@@ -264,7 +264,11 @@ function handleCommand(command) {
       confirmButtonText: '退出登录',
       cancelButtonText: '取消',
       type: 'warning'
-    }).then(() => {
+    }).then(async () => {
+      try { await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: 'Bearer ' + localStorage.getItem('token') } }) } catch { ElMessage.warning('网络中断，登录会话将在到期后失效') }
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      for (const key of Object.keys(localStorage)) if (key.startsWith('answer-draft:' + user.id + ':')) localStorage.removeItem(key)
+      sessionStorage.clear()
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       ElMessage.success('已退出登录')

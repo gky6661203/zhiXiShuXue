@@ -105,3 +105,10 @@ tmp_*.py
 
 # CodeGraph 本地索引
 .codegraph/
+
+# 本地数据库、凭据与验证产物
+backend/database/*.sqlite-*
+backend/database/.jwt-secret
+backend/database/backups/
+output/playwright/
+.playwright-cli/

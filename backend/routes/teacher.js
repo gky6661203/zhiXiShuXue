@@ -202,124 +202,12 @@ function buildAccuracyFromQuestionResults(questionResults) {
   return Math.round((correctCount / questionResults.length) * 100);
 }
 
-const demoStudentAnalyticsProfiles = {
-  'student-004': {
-    scoreTrend: [
-      { date: '2024-03-01T08:00:00.000Z', score: 86, assignmentTitle: '第一次测试' },
-      { date: '2024-03-08T08:00:00.000Z', score: 90, assignmentTitle: '阶段练习' },
-      { date: '2024-03-15T08:00:00.000Z', score: 92, assignmentTitle: '第二次测试' },
-      { date: '2024-03-22T08:00:00.000Z', score: 95, assignmentTitle: '综合提升' }
-    ],
-    knowledgePointMastery: {
-      'kp-001': { avgScore: '96.00', count: 4 },
-      'kp-002': { avgScore: '94.00', count: 4 },
-      'kp-003': { avgScore: '90.00', count: 3 },
-      'kp-005': { avgScore: '87.00', count: 3 },
-      'kp-007': { avgScore: '82.00', count: 2 }
-    },
-    wrongQuestions: [
-      {
-        questionId: 'demo-liuyang-001',
-        content: '已知 3x - 2 = 16，求 x 的值。刘洋在移项后忘记合并常数项。',
-        correctAnswer: 'x = 6',
-        studentAnswer: 'x = 5',
-        paperId: 'demo-paper-liuyang',
-        knowledgePoints: ['kp-005']
-      }
-    ]
-  },
-  'student-005': {
-    scoreTrend: [
-      { date: '2024-03-01T08:00:00.000Z', score: 78, assignmentTitle: '第一次测试' },
-      { date: '2024-03-08T08:00:00.000Z', score: 84, assignmentTitle: '阶段练习' },
-      { date: '2024-03-15T08:00:00.000Z', score: 88, assignmentTitle: '第二次测试' },
-      { date: '2024-03-22T08:00:00.000Z', score: 91, assignmentTitle: '综合提升' }
-    ],
-    knowledgePointMastery: {
-      'kp-001': { avgScore: '88.00', count: 4 },
-      'kp-002': { avgScore: '91.00', count: 4 },
-      'kp-003': { avgScore: '76.00', count: 3 },
-      'kp-005': { avgScore: '93.00', count: 3 },
-      'kp-007': { avgScore: '85.00', count: 2 }
-    },
-    wrongQuestions: [
-      {
-        questionId: 'demo-chenjing-001',
-        content: '计算 (-3) × (-4) ÷ 2。陈静乘除混合运算顺序掌握不稳定。',
-        correctAnswer: '6',
-        studentAnswer: '24',
-        paperId: 'demo-paper-chenjing',
-        knowledgePoints: ['kp-003']
-      },
-      {
-        questionId: 'demo-chenjing-002',
-        content: '判断两条直线是否平行，并说明理由。',
-        correctAnswer: '同位角相等，两直线平行',
-        studentAnswer: '看起来不相交所以平行',
-        paperId: 'demo-paper-chenjing',
-        knowledgePoints: ['kp-007']
-      }
-    ]
-  },
-  'student-010': {
-    scoreTrend: [
-      { date: '2024-03-01T08:00:00.000Z', score: 82, assignmentTitle: '第一次测试' },
-      { date: '2024-03-08T08:00:00.000Z', score: 79, assignmentTitle: '阶段练习' },
-      { date: '2024-03-15T08:00:00.000Z', score: 85, assignmentTitle: '第二次测试' },
-      { date: '2024-03-22T08:00:00.000Z', score: 87, assignmentTitle: '综合提升' }
-    ],
-    knowledgePointMastery: {
-      'kp-001': { avgScore: '84.00', count: 4 },
-      'kp-002': { avgScore: '72.00', count: 4 },
-      'kp-003': { avgScore: '88.00', count: 3 },
-      'kp-005': { avgScore: '80.00', count: 3 },
-      'kp-007': { avgScore: '94.00', count: 2 }
-    },
-    wrongQuestions: [
-      {
-        questionId: 'demo-zhenghua-001',
-        content: '计算 -7 + 12 - 8。郑华对有理数加减混合符号处理较薄弱。',
-        correctAnswer: '-3',
-        studentAnswer: '13',
-        paperId: 'demo-paper-zhenghua',
-        knowledgePoints: ['kp-002']
-      },
-      {
-        questionId: 'demo-zhenghua-002',
-        content: '解方程 4x + 6 = 2x + 18。',
-        correctAnswer: 'x = 6',
-        studentAnswer: 'x = 12',
-        paperId: 'demo-paper-zhenghua',
-        knowledgePoints: ['kp-005']
-      },
-      {
-        questionId: 'demo-zhenghua-003',
-        content: '判断 0.333... 是否为有理数并说明原因。',
-        correctAnswer: '是，可以写成 1/3',
-        studentAnswer: '不是，因为小数位很多',
-        paperId: 'demo-paper-zhenghua',
-        knowledgePoints: ['kp-001']
-      }
-    ]
-  }
-};
-
-function applyDemoStudentAnalyticsProfile(student, analytics) {
-  const profile = demoStudentAnalyticsProfiles[student.id];
-  if (!profile) return analytics;
-
-  return {
-    ...analytics,
-    scoreTrend: profile.scoreTrend,
-    knowledgePointMastery: profile.knowledgePointMastery,
-    wrongQuestions: profile.wrongQuestions
-  };
-}
+function applyDemoStudentAnalyticsProfile(student, analytics) { return analytics; }
 
 // 配置文件上传
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../uploads/papers');
+    const uploadDir = path.join(process.env.UPLOAD_DIR || path.join(__dirname, '../uploads'), 'papers');
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -327,25 +215,16 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const originalName = normalizeUploadedFileName(file.originalname);
-    cb(null, uniqueSuffix + path.extname(originalName));
+    const ext = { 'application/pdf': '.pdf', 'image/png': '.png', 'image/jpeg': '.jpg' }[file.mimetype];
+    cb(null, uniqueSuffix + ext);
   }
 });
 
 const upload = multer({
+  fileFilter: (_req, file, cb) => { const allowed = ['application/pdf', 'image/png', 'image/jpeg'].includes(file.mimetype); cb(allowed ? null : new Error('只允许 PDF、PNG 和 JPEG 试卷'), allowed); },
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpg|jpeg|png|pdf/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
 
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error('不支持的文件格式'));
-    }
-  }
 });
 
 // ========== 班级管理 ==========
@@ -448,6 +327,7 @@ router.put('/classes/:id', (req, res) => {
 router.delete('/classes/:id', (req, res) => {
   try {
     const { id } = req.params;
+    if (db.find('students', { classId: id }).length || db.find('assignments', { classId: id }).length) return res.status(400).json({ success: false, message: '班级仍有学生或作业，请先处理关联记录' });
     const deleted = db.deleteById('classes', id);
 
     if (!deleted) {
@@ -557,6 +437,7 @@ router.delete('/students/:id', (req, res) => {
       return res.status(404).json({ success: false, message: '学生不存在' });
     }
 
+    if (db.find('answers', { studentId: id }).length || db.find('learningRecords', { studentId: id }).length || db.find('drafts', { studentId: id }).length) return res.status(400).json({ success: false, message: '学生已有学习记录，请管理员办理账号与数据删除' });
     // 从班级中移除
     const cls = db.findById('classes', student.classId);
     if (cls) {
@@ -580,6 +461,11 @@ router.delete('/students/:id', (req, res) => {
 // 上传试卷
 router.post('/papers/upload', upload.single('file'), (req, res) => {
   try {
+    if (req.file) {
+      const data = fs.readFileSync(req.file.path);
+      const valid = req.file.mimetype === 'application/pdf' ? data.subarray(0, 5).toString() === '%PDF-' : req.file.mimetype === 'image/png' ? data.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])) : data[0] === 255 && data[1] === 216 && data[2] === 255;
+      if (!valid) { fs.unlinkSync(req.file.path); return res.status(400).json({ success: false, message: '试卷文件内容与格式不符' }); }
+    }
     const teacherId = req.headers['x-user-id'];
     const { title, classId } = req.body;
 
@@ -596,7 +482,7 @@ router.post('/papers/upload', upload.single('file'), (req, res) => {
       filePath: `/uploads/papers/${req.file.filename}`,
       fileName: originalName,
       fileSize: req.file.size,
-      fileType: path.extname(originalName),
+      fileType: path.extname(req.file.filename),
       status: 'pending', // pending, published
       questions: []
     });
@@ -657,10 +543,10 @@ router.delete('/papers/:id', (req, res) => {
       return res.status(404).json({ success: false, message: '试卷不存在' });
     }
 
+    if (db.find('assignments').some(item => item.paperId === paper.id)) return res.status(400).json({ success: false, message: '试卷已用于作业，请保留原卷供复核' });
     // 删除文件
     if (paper.filePath) {
-      const relativePath = paper.filePath.replace(/^\//, '');
-      const filePath = path.join(__dirname, '..', relativePath);
+      const filePath = require('../services/upload-path').resolveUpload(paper.filePath);
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
@@ -814,6 +700,7 @@ router.post('/assignments', (req, res) => {
         return res.status(400).json({ success: false, message: '所选题目不存在或已失效' });
       }
 
+      if (selectedQuestions.some(question => question.reviewStatus !== 'approved')) return res.status(400).json({ success: false, message: '请先审核所有作业题目' });
       const generatedPaper = db.create('papers', {
         title: `${title}-题目集`,
         teacherId,
@@ -833,7 +720,12 @@ router.post('/assignments', (req, res) => {
       db.updateById('papers', effectivePaperId, { status: 'published' });
     }
 
+    const snapshotIds = db.findById('papers', effectivePaperId)?.questions || [];
+    const questionSnapshots = snapshotIds.map(id => db.findById('questions', id)).filter(Boolean).map(item => ({ ...item }));
+    if (questionSnapshots.length !== snapshotIds.length || questionSnapshots.some(item => item.reviewStatus !== 'approved')) return res.status(400).json({ success: false, message: '试卷题目须存在且已审核' });
     const assignment = db.create('assignments', {
+      questionIds: snapshotIds,
+      questionSnapshots,
       title,
       paperId: effectivePaperId,
       classId,

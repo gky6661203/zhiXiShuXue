@@ -25,8 +25,9 @@
             {{ formatDate(scope.row.createdAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="200">
+        <el-table-column label="操作" width="290">
           <template #default="scope">
+            <el-button type="primary" link @click="curriculum.open(scope.row)">已学范围</el-button>
             <el-button type="primary" link @click="viewStudents(scope.row)">查看学生</el-button>
             <el-button type="primary" link @click="editClass(scope.row)">编辑</el-button>
             <el-button type="danger" link @click="deleteClass(scope.row)">删除</el-button>
@@ -35,6 +36,7 @@
       </el-table>
     </el-card>
     
+    <ClassCurriculum ref="curriculum" />
     <!-- 添加/编辑班级对话框 -->
     <el-dialog
       v-model="dialogVisible"
@@ -72,6 +74,8 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import api from '@/utils/api'
 import dayjs from 'dayjs'
+import ClassCurriculum from '@/components/ClassCurriculum.vue'
+const curriculum = ref(null)
 
 var router = useRouter()
 var loading = ref(false)

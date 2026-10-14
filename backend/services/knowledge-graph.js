@@ -10,6 +10,7 @@ const STATUS_COLORS = {
 const CURATED_NODE_IDS = sharedKnowledgeTree.categories.flatMap(category => category.nodes.map(node => node.id));
 const CURATED_NODE_SET = new Set(CURATED_NODE_IDS);
 const DEMO_GRAPH = sharedKnowledgeTree.categories.flatMap(category => category.nodes.map(node => ({
+  ...node,
   id: node.id,
   name: node.name,
   difficulty: node.difficulty,
@@ -35,7 +36,7 @@ function getKnowledgeGraph(params = {}) {
   const pageSize = Math.max(1, Math.min(500, Number(params.pageSize) || 100));
   const subject = String(params.subject || params.domain || '数学');
   const domain = String(params.domain || '').trim();
-  const rows = db.data.knowledgeGraphNodes.filter(item => !domain || item.domain === domain);
+  const rows = require('./curriculum').nodes.filter(item => !domain || item.domain === domain);
   const start = (page - 1) * pageSize;
   return {
     subject,

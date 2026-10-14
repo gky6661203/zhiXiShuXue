@@ -307,7 +307,7 @@ function renderScoreChart(dom, trend) {
 
   if (xData.length === 0) {
     xData = ['暂无数据']
-    yData = [0]
+    yData = [null]
   }
 
   scoreChart.setOption({

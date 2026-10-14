@@ -17,6 +17,12 @@ const routes = [
     meta: { requiresAuth: true, role: 'teacher' },
     children: [
       {
+        path: 'review-center',
+        name: 'TeacherReviewCenter',
+        component: () => import('@/views/teacher/ReviewCenter.vue'),
+        meta: { title: '复核与纠错' }
+      },
+      {
         path: '',
         redirect: '/teacher/dashboard'
       },

@@ -46,7 +46,7 @@
               <div class="kp-main">
                 <div class="kp-name-row">
                   <span class="kp-name">{{ item.name }}</span>
-                  <span class="kp-status">{{ getMasteryLabel(item.masteryRate) }}</span>
+                  <span class="kp-status">{{ item.statusLabel }}</span>
                   <span v-if="item.hasNewRecommendation" class="kp-new">老师推荐</span>
                 </div>
                 <div class="kp-bar" role="progressbar" :aria-valuenow="parseInt(item.masteryRate || 0, 10)" aria-valuemin="0" aria-valuemax="100" :aria-label="item.name + ' 掌握度'">
@@ -121,7 +121,7 @@ function loadData() {
     .then(function(res) {
       if (res.success) {
         // 后端已经过滤并排序好了，只保留掌握度 < 80 的（即红和黄）
-        weakPoints.value = (res.data || []).filter(function(p) { return p.masteryRate < 80 })
+        weakPoints.value = (res.data || []).filter(function(p) { return p.eligible && p.masteryRate !== null && p.masteryRate < 80 })
         ensureExpandedState()
       }
     })

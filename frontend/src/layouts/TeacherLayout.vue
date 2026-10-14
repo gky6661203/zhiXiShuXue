@@ -6,6 +6,7 @@
 import NotebookShell from '@/components/NotebookShell.vue'
 
 const menu = [
+  { index: '/teacher/review-center', label: '复核与纠错', icon: 'EditPen' },
   { index: '/teacher/dashboard', label: '首页概览', icon: 'House' },
   {
     index: 'management',

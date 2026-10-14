@@ -48,7 +48,7 @@ const QUESTION_BANK = {
   'alg-6': [
     ['一次函数 y=2x+1 中，当 x=1 时，y=（ ）', ['1', '2', '3', '4'], '3', '把 x=1 代入解析式。', 1, '选择'],
     ['函数 y=3x-2 中，当 x=2 时，y=____', [], '4', '代入求值。', 1, '填空'],
-    ['一次函数 y=-x+4 的图像大致经过（ ）', ['第一、二象限', '第一、三象限', '第二、四象限', '第三、四象限'], '第一、二象限', '截距为 4，斜率为负。', 3, '选择'],
+    ['一次函数 y=-x+4 的图像经过（ ）', ['第一、二象限', '第一、三象限', '第二、四象限', '第一、二、四象限'], '第一、二、四象限', 'x<0 时位于第二象限，0<x<4 时位于第一象限，x>4 时位于第四象限。', 3, '选择'],
     ['已知一次函数 y=kx+5 经过点(1,7)，求 k。', [], '2', '把点坐标代入方程。', 3, '填空'],
     ['说明一次函数图像与系数 k 的关系。', [], 'k>0 时图像从左到右上升，k<0 时图像从左到右下降。', '斜率决定增减性。', 4, '解答']
   ],
@@ -170,7 +170,7 @@ function buildQuestion(kpId, kpName, domain, index, row) {
     difficulty: DIFF_MAP[difficultyLevel],
     questionTypeLabel: typeLabel,
     type: TYPE_MAP[typeLabel],
-    reviewStatus: 'approved',
+    reviewStatus: 'pending',
     source: 'manual-curated',
     score: difficultyLevel <= 2 ? 8 : difficultyLevel === 3 ? 12 : 16,
     createdAt: new Date().toISOString(),
@@ -179,6 +179,7 @@ function buildQuestion(kpId, kpName, domain, index, row) {
 }
 
 function ensureManualQuestionBank() {
+  if (db.data.settings.questionBankInitialized) return;
   const all = db.find('questions')
   const existingIds = new Set(all.map(item => item.id))
   GRAPH_NODES.forEach(([kpId, kpName, domain]) => {
@@ -188,17 +189,19 @@ function ensureManualQuestionBank() {
       if (!existingIds.has(question.id)) db.create('questions', question)
     })
   })
+  db.data.settings.questionBankInitialized = true;
 }
 
 function getQuestionBankByNode(filters = {}) {
   ensureManualQuestionBank()
   return db.find('questions').filter(item => {
-    if (filters.knowledgePointId && item.knowledgePointId !== filters.knowledgePointId) return false
+    if (item.reviewStatus !== 'approved') return false;
+    if (filters.knowledgePointId && item.knowledgePointId !== filters.knowledgePointId && !(item.knowledgePoints || []).includes(filters.knowledgePointId)) return false
     if (filters.difficulty && Number(item.difficultyLevel) !== Number(filters.difficulty)) return false
     if (filters.type && item.type !== filters.type) return false
     if (filters.reviewStatus && item.reviewStatus !== filters.reviewStatus) return false
-    return item.source === 'manual-curated' || item.source === 'teacher-manual'
-  })
+    return true
+  }).map(question => require('./curriculum').enrichQuestion(question))
 }
 
 module.exports = {

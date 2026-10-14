@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
 
-const backendTarget = 'http://127.0.0.1:5001'
+const backendTarget = process.env.BACKEND_TARGET || 'http://127.0.0.1:5001'
 
 export default defineConfig({
   plugins: [vue()],
@@ -14,12 +14,13 @@ export default defineConfig({
   server: {
     port: 5000,
     strictPort: true,
-    host: '0.0.0.0',
+    host: '127.0.0.1',
     fs: {
       // katex 安装在项目根目录的 node_modules，开发模式下需要允许读取上一级目录（否则公式字体 403）
       allow: [path.resolve(__dirname, '..')]
     },
     proxy: {
+      '/uploads': { target: backendTarget, changeOrigin: true },
       '/api': {
         target: backendTarget,
         changeOrigin: true

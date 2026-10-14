@@ -78,6 +78,7 @@
         <el-form-item label="电话" prop="phone">
           <el-input v-model="studentForm.phone" placeholder="请输入电话（选填）" />
         </el-form-item>
+        <el-form-item v-if="!isEdit" label="初始密码"><el-input v-model="studentForm.initialPassword" show-password placeholder="至少 8 位，交给本人后请修改" /></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -165,6 +166,7 @@ function showAddDialog() {
   isEdit.value = false
   studentForm.id = ''
   studentForm.studentNo = ''
+  studentForm.initialPassword = ''
   studentForm.name = ''
   studentForm.gender = 'male'
   studentForm.email = ''

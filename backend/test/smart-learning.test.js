@@ -19,14 +19,15 @@ describe('recommendation factors', () => {
 })
 
 describe('auto grade', () => {
-  test('regex subjective grading', () => {
+  test('subjective answers require teacher review even with a matching answer', () => {
     const result = gradeAnswer({ type: 'subjective', answer_text: '^x=±2$' }, 'x=±2')
-    expect(result.isCorrect).toBe(true)
+    expect(result.isCorrect).toBeNull()
+    expect(result.needsReview).toBe(true)
   })
 
-  test('levenshtein subjective grading', () => {
+  test('matching proof text is not an automatic final grade', () => {
     const result = gradeAnswer({ type: 'subjective', answer_text: '平行线是在同一平面内永不相交的两条直线' }, '平行线是在同一平面内永不相交的两条直线')
-    expect(result.isCorrect).toBe(true)
+    expect(result.needsReview).toBe(true)
   })
 })
 
@@ -34,7 +35,8 @@ describe('mastery state machine', () => {
   test('updateMastery returns valid status', () => {
     db.create('student_answer', { userId: 'student-001', questionId: 'q1', kpCode: 'kp-001', isCorrect: true, costTime: 60 })
     const mastery = updateMastery('student-001', 'kp-001')
-    expect(['待强化', '学习中', '已掌握']).toContain(mastery.status)
+    expect(mastery.status).toBe('样本不足')
+    expect(mastery.mastery).toBeLessThan(80)
   })
 })
 

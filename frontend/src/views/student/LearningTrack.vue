@@ -21,7 +21,7 @@
         </div>
         <div class="summary-item">
           <span class="summary-label">平均正确率</span>
-          <strong>{{ stats.averageCorrectRate }}%</strong>
+          <strong>{{ stats.averageCorrectRate === null ? '尚无已判定记录' : stats.averageCorrectRate + '%' }}</strong>
         </div>
       </div>
     </el-card>
@@ -108,7 +108,7 @@
                 </div>
                 <div class="detail-stat-item">
                   <div class="label">耗时</div>
-                  <div class="value">{{ detailData.duration }}min</div>
+                  <div class="value">{{ detailData.duration === null ? '未记录' : detailData.duration + 'min' }}</div>
                 </div>
               </div>
               <div class="radar-title">知识点掌握分布</div>
@@ -215,7 +215,7 @@ function renderCombinedChart() {
   const data = filteredTrackList.value
   const xData = data.map(item => dayjs(item.date).format('MM-DD'))
   const rateData = data.map(item => item.correctRate || 0)
-  const masteryData = data.map(item => item.masteryAfter || 0)
+  const masteryData = data.map(item => item.masteryAfter ?? null)
 
   combinedChart.setOption({
     tooltip: {
@@ -247,7 +247,7 @@ function renderCombinedChart() {
       },
       {
         type: 'value',
-        name: '掌握度',
+        name: '参考掌握度',
         min: 0,
         max: 100,
         axisLabel: { formatter: '{value}%' },
@@ -342,7 +342,7 @@ function renderRadarChart() {
 }
 
 function getStatusText(status) {
-  const map = { graded: '已完成', submitted: '待批改', completed: '已掌握' }
+  const map = { graded: '已完成', submitted: '待批改', completed: '已完成', pending_review: '等待复核' }
   return map[status] || status || '-'
 }
 

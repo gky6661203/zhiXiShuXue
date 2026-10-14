@@ -594,15 +594,13 @@ router.post('/restore', (req, res) => {
     }
     
     // 恢复数据
-    Object.keys(data).forEach(key => {
-      db.data[key] = data[key];
-    });
+    db.restore(data);
     
     db.addLog(userId, 'RESTORE_DATA', { timestamp: new Date().toISOString() });
     
     res.json({ success: true, message: '数据恢复成功' });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(400).json({ success: false, message: error.message });
   }
 });
 

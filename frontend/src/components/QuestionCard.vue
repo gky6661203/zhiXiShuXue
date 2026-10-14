@@ -1,7 +1,7 @@
 <template>
-  <article :class="['nb-question', result ? (result.isCorrect ? 'is-right' : 'is-wrong') : '']">
+  <article :class="['nb-question', result && !result.needsReview ? (result.isCorrect ? 'is-right' : 'is-wrong') : '']">
     <!-- 红笔批改记号：提交后出现 -->
-    <svg v-if="result" class="pen-mark" viewBox="0 0 120 100" aria-hidden="true">
+    <svg v-if="result && !result.needsReview" class="pen-mark" viewBox="0 0 120 100" aria-hidden="true">
       <path
         v-if="result.isCorrect"
         class="pen-stroke"
@@ -21,6 +21,8 @@
     </header>
 
     <MathText class="q-stem" tag="div" :text="question.content" />
+    <img v-if="question.imageUrl" :src="question.imageUrl" alt="题目附图" style="max-width:100%;max-height:300px" />
+    <QuestionTools :question="question" :answered="!!result" />
 
     <!-- 选择题 -->
     <div v-if="isChoice" class="q-options" role="radiogroup" :aria-label="'第 ' + (index + 1) + ' 题选项'">
@@ -68,7 +70,8 @@
     />
 
     <!-- 批改结果 -->
-    <section v-if="result" class="q-result">
+    <p v-if="result?.needsReview" class="q-note">这道解答题已保存，等待老师复核解题过程。</p>
+    <section v-if="result && !result.needsReview" class="q-result">
       <dl class="q-answers">
         <div v-if="!isChoice || !result.isCorrect">
           <dt>你的答案</dt>
@@ -92,6 +95,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import QuestionTools from '@/components/QuestionTools.vue'
 import MathText from '@/components/MathText.vue'
 
 const props = defineProps({

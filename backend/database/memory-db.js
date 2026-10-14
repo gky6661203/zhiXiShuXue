@@ -5,9 +5,11 @@
 
 const { v4: uuidv4 } = require('uuid');
 const bcrypt = require('bcryptjs');
-const { loadQuestionsFromStore, getAllQuestions, upsertQuestion, deleteQuestion: deleteQuestionFromStore } = require('./question-store');
+const { getDatabase, replaceAllQuestions, loadQuestionsFromStore, getAllQuestions, upsertQuestion, deleteQuestion: deleteQuestionFromStore } = require('./question-store');
 
-// 内存存储
+const { persistentData, hasBusinessData } = require('./business-store');
+
+// SQLite-backed collections
 const db = {
   users: [],
   students: [],
@@ -29,6 +31,13 @@ const db = {
   student_mistake_2: [],
   student_mistake_3: [],
   logs: [],
+  drafts: [],
+  uploadedFiles: [],
+  questionReports: [],
+  recommendationLogs: [],
+  knowledgeGraphNodes: [],
+  knowledgeGraphWrong: [],
+  knowledgeGraphRecommend: [],
   settings: {}
 };
 
@@ -645,16 +654,46 @@ function initializeData() {
   db.answers.push(answerSubjective2);
 
   console.log('数据库初始化完成');
-  console.log('默认账号信息:');
-  console.log('管理员 - 用户名: admin, 密码: admin123');
-  console.log('教师 - 用户名: teacher, 密码: teacher123');
-  console.log('学生 - 用户名: student, 密码: student123');
+
 }
 
 // 数据库操作类
 class Database {
   constructor() {
-    this.data = db;
+    this.data = persistentData(db);
+    this.data.questions = loadQuestionsFromStore([]);
+    if (process.env.NODE_ENV === 'production' && this.data.users.some(user => !user.disabled && ['admin123', 'teacher123', 'student123', '123456'].some(password => bcrypt.compareSync(password, user.password)))) throw new Error('生产环境禁止默认密码，请使用独立 DATA_DIR 初始化，或先重设现有账号密码');
+  }
+
+  transaction(work) {
+    const sql = getDatabase();
+    const snapshot = JSON.stringify(this.data);
+    sql.exec('BEGIN IMMEDIATE');
+    try { const result = work(); sql.exec('COMMIT'); return result; }
+    catch (error) {
+      sql.exec('ROLLBACK');
+      const restored = JSON.parse(snapshot);
+      this.data = persistentData(restored);
+      this.data.questions = restored.questions;
+      throw error;
+    }
+  }
+
+  restore(data) {
+    if (!data || !Array.isArray(data.users) || !data.users.some(user => user.role === 'admin')) throw new Error('备份必须包含管理员账号');
+    if (new Set(data.users.map(user => user.id)).size !== data.users.length || new Set(data.users.map(user => user.username)).size !== data.users.length || data.users.some(user => !user.id || !user.username || !['admin','teacher','student'].includes(user.role) || !/^\$2[aby]\$/.test(user.password || ''))) throw new Error('备份账号无效或重复');
+    if (!data.users.some(user => user.role === 'admin' && !user.disabled)) throw new Error('备份中至少需要一个可用管理员');
+    if (!data.settings || typeof data.settings !== 'object' || Array.isArray(data.settings)) throw new Error('备份必须包含系统配置');
+    for (const [name, value] of Object.entries(data)) {
+      if (!Object.hasOwn(this.data, name) || name === '__proto__') throw new Error('未知的数据集合：' + name);
+      if (name !== 'settings' && !Array.isArray(value)) throw new Error('无效的数据集合：' + name);
+      if (Array.isArray(value) && value.some(item => !item || typeof item !== 'object')) throw new Error('数据集合记录格式无效：' + name);
+    }
+    return this.transaction(() => {
+      for (const [name, value] of Object.entries(data)) this.data[name] = value;
+      getDatabase().prepare('DELETE FROM questions').run();
+      this.data.questions.forEach(question => upsertQuestion(question));
+    });
   }
 
   reloadQuestionsFromStore() {
@@ -679,6 +718,9 @@ class Database {
 
   // 通用 CRUD 操作
   create(collection, item) {
+    if (!Array.isArray(this.data[collection])) throw new Error('数据集合不存在');
+    if (item.id && this.data[collection].some(existing => existing.id === item.id)) throw new Error('记录编号重复');
+    if (collection === 'users' && this.data.users.some(user => user.username === item.username)) throw new Error('用户名已存在');
     const newItem = {
       ...item,
       id: item.id || uuidv4(),
@@ -691,25 +733,27 @@ class Database {
   }
 
   findById(collection, id) {
-    return this.data[collection].find(item => item.id === id);
+    return this.find(collection).find(item => item.id === id);
   }
 
   find(collection, query = {}) {
-    return this.data[collection].filter(item => {
+    return (this.data[collection] || []).filter(item => require('../middleware/access').allowedRecord(collection, item)).filter(item => {
       return Object.keys(query).every(key => item[key] === query[key]);
     });
   }
 
   findOne(collection, query = {}) {
-    return this.data[collection].find(item => {
+    return this.find(collection).find(item => {
       return Object.keys(query).every(key => item[key] === query[key]);
     });
   }
 
   updateById(collection, id, updates) {
+    if (!this.findById(collection, id)) return null;
     const index = this.data[collection].findIndex(item => item.id === id);
     if (index === -1) return null;
 
+    if (collection === 'users' && updates.username && this.data.users.some(user => user.id !== id && user.username === updates.username)) throw new Error('用户名已存在');
     this.data[collection][index] = {
       ...this.data[collection][index],
       ...updates,
@@ -720,6 +764,7 @@ class Database {
   }
 
   deleteById(collection, id) {
+    if (!this.findById(collection, id)) return false;
     const index = this.data[collection].findIndex(item => item.id === id);
     if (index === -1) return false;
 
@@ -734,9 +779,7 @@ class Database {
     this.data[collection] = this.data[collection].filter(item => {
       return !Object.keys(query).every(key => item[key] === query[key]);
     });
-    if (initialLength != this.data[collection].length && collection === 'questions') {
-      this.data[collection].forEach(item => this.persistCollection(collection, { item }));
-    }
+    if (initialLength !== this.data[collection].length && collection === 'questions') replaceAllQuestions(this.data.questions);
     return initialLength - this.data[collection].length;
   }
 
@@ -814,7 +857,7 @@ class Database {
       id: uuidv4(),
       userId,
       action,
-      details,
+      details: JSON.parse(JSON.stringify(details || {}, (key, value) => /password|secret|apiKey|authorization|token/i.test(key) ? '[FILTERED]' : value)),
       timestamp: new Date().toISOString()
     });
   }
@@ -868,7 +911,16 @@ Database.prototype.resolveStudentMistake = function(studentId, questionId) {
   });
 };
 
-initializeData();
+if (!hasBusinessData()) {
+  initializeData();
+  for (const name of ['answers', 'assignments', 'papers', 'learningRecords', 'studentQuestionAttempts', 'masteredWrongQuestions', 'student_answer', 'student_knowledge_mastery', 'mastery_snapshot', 'student_mistake_0', 'student_mistake_1', 'student_mistake_2', 'student_mistake_3', 'logs']) db[name] = [];
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.ADMIN_PASSWORD || process.env.ADMIN_PASSWORD.length < 12) throw new Error('Production requires ADMIN_PASSWORD with at least 12 characters');
+    db.users = db.users.filter(user => user.role === 'admin');
+    db.users[0].password = bcrypt.hashSync(process.env.ADMIN_PASSWORD, 12);
+    db.students = []; db.teachers = []; db.classes = [];
+  }
+}
 
 // 导出数据库实例
 const database = new Database();

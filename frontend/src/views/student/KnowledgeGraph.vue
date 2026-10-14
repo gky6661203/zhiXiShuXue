@@ -12,7 +12,7 @@
       </div>
     </header>
 
-    <div class="summary-row">
+    <div class="summary-row"><span>尚未测评或样本不足 {{ summary.unassessed }}</span>
       <span class="legend-item is-weak"><i></i>薄弱 <b class="nb-num">{{ summary.weak }}</b></span>
       <span class="legend-item is-learning"><i></i>待巩固 <b class="nb-num">{{ summary.learning }}</b></span>
       <span class="legend-item is-mastered"><i></i>已掌握 <b class="nb-num">{{ summary.mastered }}</b></span>
@@ -30,7 +30,7 @@
     <el-dialog v-model="practiceDialogVisible" :title="dialogTitle" width="980px" class="kg-dialog" destroy-on-close>
       <div v-if="activeNode" class="dialog-head">
         <el-tag :type="tagType(activeNode.statusLabel)">{{ activeNode.statusLabel }}</el-tag>
-        <span>掌握度 {{ activeNode.masteryRate }}%</span>
+        <span>{{ activeNode.masteryRate === null ? '尚未测评' : '参考掌握度 ' + activeNode.masteryRate + '%' }}</span>
         <span class="dialog-category">{{ activeNode.categoryName }}</span>
       </div>
 
@@ -45,7 +45,7 @@
             @click="openNode(item)"
           >
             <span>{{ item.name }}</span>
-            <small>{{ item.statusLabel }} {{ item.masteryRate }}%</small>
+            <small>{{ item.statusLabel }} {{ item.masteryRate === null ? '' : item.masteryRate+'%' }}</small>
           </button>
         </div>
         <div v-else class="prereq-empty">这是起点知识点，没有前置要求。</div>
@@ -71,7 +71,7 @@
           :result="practiceResults[item.id]"
         />
 
-        <div class="practice-pack-actions footer-actions">
+        <div class="practice-pack-actions footer-actions"><span>{{ graphDraft.status.value || '作答会自动保存' }}</span>
           <el-button @click="practiceDialogVisible = false">关闭</el-button>
           <el-button
             type="primary"
@@ -94,6 +94,7 @@ import * as echarts from 'echarts'
 import { NB_ECHARTS_THEME, registerNotebookChartTheme } from '@/utils/notebook-colors'
 registerNotebookChartTheme(echarts)
 import api from '@/utils/api'
+import { useAnswerDraft } from '@/composables/useAnswerDraft'
 import QuestionCard from '@/components/QuestionCard.vue'
 import { inferMajorCategory, normalizeStatusLabel, KNOWLEDGE_TREE_SHARED_CONFIG } from '@/utils/knowledge-meta'
 import { NB, NB_MASTERY, NB_MASTERY_INK, NB_CATEGORY, NB_FONT } from '@/utils/notebook-colors'
@@ -115,10 +116,7 @@ let chart = null
 const CATEGORIES = KNOWLEDGE_TREE_SHARED_CONFIG.categories.map(item => item.name)
 
 // 前置关系来自 shared/knowledge-tree.json
-const PREREQ_MAP = KNOWLEDGE_TREE_SHARED_CONFIG.categories.reduce((acc, category) => {
-  category.nodes.forEach(node => { acc[node.id] = node.prerequisites || [] })
-  return acc
-}, {})
+const PREREQ_MAP = computed(() => Object.fromEntries(flatNodes.value.map(node => [node.id, node.prerequisites || []])))
 
 const nodeMap = computed(() => flatNodes.value.reduce((acc, item) => {
   acc[item.id] = item
@@ -128,16 +126,18 @@ const nodeMap = computed(() => flatNodes.value.reduce((acc, item) => {
 const summary = computed(() => flatNodes.value.reduce((acc, item) => {
   if (item.statusLabel === '已掌握') acc.mastered += 1
   else if (item.statusLabel === '待巩固') acc.learning += 1
-  else acc.weak += 1
+  else if (item.statusLabel === '薄弱') acc.weak += 1
+  else acc.unassessed += 1
   return acc
-}, { weak: 0, learning: 0, mastered: 0 }))
+}, { weak: 0, learning: 0, mastered: 0, unassessed: 0 }))
 
 const activePrereqs = computed(() => {
   if (!activeNode.value) return []
-  return (PREREQ_MAP[activeNode.value.id] || []).map(id => nodeMap.value[id]).filter(Boolean)
+  return (PREREQ_MAP.value[activeNode.value.id] || []).map(id => nodeMap.value[id]).filter(Boolean)
 })
 
-const weakPrereqs = computed(() => activePrereqs.value.filter(item => item.statusLabel !== '已掌握'))
+const weakPrereqs = computed(() => activePrereqs.value.filter(item => item.statusLabel === '薄弱'))
+const graphDraft = useAnswerDraft(computed(() => 'graph-' + (activeNode.value?.id || '')), practiceAnswers, practiceQuestions)
 const practiceSubmitted = computed(() => Object.keys(practiceResults.value).length > 0)
 
 const dialogTitle = computed(() => {
@@ -152,6 +152,8 @@ function statusKey(label) {
 }
 
 function tagType(label) {
+  if (label === '尚未测评') return 'info'
+  if (label === '样本不足') return 'warning'
   if (label === '已掌握') return 'success'
   if (label === '待巩固') return 'warning'
   return 'danger'
@@ -160,7 +162,7 @@ function tagType(label) {
 function normalizeNodes(list) {
   return (list || []).map((item) => ({
     ...item,
-    masteryRate: Number(item.masteryRate || 0),
+    masteryRate: item.masteryRate === null ? null : Number(item.masteryRate || 0),
     categoryName: inferMajorCategory(item, CATEGORIES[0]),
     statusLabel: normalizeStatusLabel(item.statusLabel, item.masteryRate)
   }))
@@ -183,7 +185,7 @@ function computeDepths(ids) {
     if (depth[id] !== undefined) return depth[id]
     if (visiting.has(id)) return 0
     visiting.add(id)
-    const prereqs = (PREREQ_MAP[id] || []).filter(p => ids.has(p))
+    const prereqs = (PREREQ_MAP.value[id] || []).filter(p => ids.has(p))
     depth[id] = prereqs.length ? Math.max(...prereqs.map(walk)) + 1 : 0
     visiting.delete(id)
     return depth[id]
@@ -261,7 +263,7 @@ function buildGraph() {
           fontFamily: NB_FONT,
           fontWeight: 600,
           fontSize: 14,
-          formatter: `${item.name}\n{rate|${item.masteryRate}%}`,
+          formatter: `${item.name}\n{rate|${item.masteryRate === null ? item.statusLabel : item.masteryRate+'%'}}`,
           rich: { rate: { color: NB_MASTERY_INK[item.statusLabel] || NB.ink3, fontSize: 14, fontWeight: 700, lineHeight: 20 } }
         }
       })
@@ -270,7 +272,7 @@ function buildGraph() {
   })
 
   flatNodes.value.forEach(item => {
-    (PREREQ_MAP[item.id] || []).forEach(pre => {
+    (PREREQ_MAP.value[item.id] || []).forEach(pre => {
       if (!ids.has(pre)) return
       const from = nodeMap.value[pre]
       const weakLink = from && from.statusLabel !== '已掌握' && item.statusLabel !== '已掌握'
@@ -305,8 +307,8 @@ function renderChart() {
         }
         const data = params.data || {}
         if (!data.raw) return ''
-        const pre = (PREREQ_MAP[data.id] || []).map(id => nodeMap.value[id]).filter(Boolean)
-        return `<b>${data.raw.name}</b><br/>状态：${data.raw.statusLabel}<br/>掌握度：${data.raw.masteryRate}%` +
+        const pre = (PREREQ_MAP.value[data.id] || []).map(id => nodeMap.value[id]).filter(Boolean)
+        return `<b>${data.raw.name}</b><br/>状态：${data.raw.statusLabel}<br/>掌握度：${data.raw.masteryRate === null ? '尚未测评' : data.raw.masteryRate+'%'}` +
           (pre.length ? `<br/>前置：${pre.map(p => p.name).join('、')}` : '')
       }
     },
@@ -343,8 +345,10 @@ function resetPracticeState() {
   practiceResults.value = {}
 }
 
-function openNode(node) {
+async function openNode(node) {
   if (!node) return
+  if (!node.eligible) { ElMessage.info('请老师先将这个知识点加入班级已学范围'); return }
+  graphDraft.pause()
   activeNode.value = nodeMap.value[node.id] || node
   practiceDialogVisible.value = true
   practiceLoading.value = true
@@ -355,6 +359,7 @@ function openNode(node) {
       if (res.success) {
         const data = res.data || {}
         practiceQuestions.value = data.questions || []
+        graphDraft.restore()
       }
     })
     .catch(() => {
@@ -381,18 +386,22 @@ function submitPracticePack() {
     }, {}),
     questionIds: ids,
     mode: 'knowledge-graph',
+    requestId: graphDraft.requestId.value,
     title: `${activeNode.value.name} · 个性化补练`
   }).then(res => {
     if (res.success) {
       const data = res.data || {}
+      graphDraft.clear()
       ;(data.questionResults || []).forEach(item => {
         practiceResults.value[item.questionId] = {
-          isCorrect: !!item.correct,
+          isCorrect: item.correct,
+          needsReview: item.needsReview,
+          explanation: item.explanation,
           userAnswer: item.answer || '',
           correctAnswer: item.correctAnswer || '-'
         }
       })
-      ElMessage.success('提交成功，已显示答案和解析；错题已记入错题本')
+      ElMessage.success('作答已保存，解答题等待老师复核')
       loadData(true)
     }
   }).catch(() => {

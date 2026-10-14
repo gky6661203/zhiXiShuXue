@@ -1,3 +1,4 @@
+const { equivalent } = require('./math-equivalence');
 function levenshtein(a, b) {
   const s = String(a || '');
   const t = String(b || '');
@@ -112,40 +113,29 @@ function gradeAnswer(question, userAnswer) {
   }
 
   if (type !== 'subjective') {
-    const isCorrect = normalizeText(normalizedUserAnswer) === normalizeText(correctAnswer);
+    const isCorrect = [correctAnswer, ...(question.acceptedAnswers || [])].some(answer => equivalent(normalizedUserAnswer, answer));
+    const needsReview = !isCorrect && /[√π±\\{},;]|或|(?:sin|cos|tan)|\^\d+\.\d+|\/[^=]*[a-z]/.test(normalizedUserAnswer + correctAnswer);
     return {
-      isCorrect,
-      correctAnswer,
+      needsReview,
+      isCorrect: needsReview ? null : isCorrect,
+      correctAnswer: needsReview ? '' : correctAnswer,
       explanation: question.explanation || question.analysis || '',
       userAnswer: normalizedUserAnswer,
       similarity: isCorrect ? 1 : 0
     };
   }
 
-  let isCorrect = false;
-  let score = 0;
-  if (looksLikeRegex(correctAnswer)) {
-    isCorrect = new RegExp(correctAnswer).test(normalizedUserAnswer);
-    score = isCorrect ? 1 : 0;
-  } else {
-    score = similarity(normalizedUserAnswer, correctAnswer);
-    isCorrect = score >= 0.8;
-  }
-
+  // A correct-looking final answer is insufficient evidence for a proof or a
+  // multi-step solution. The teacher reviews the process and awards step scores.
   return {
-    isCorrect,
+    isCorrect: null,
+    needsReview: true,
     correctAnswer,
     explanation: question.explanation || question.analysis || '',
     userAnswer: normalizedUserAnswer,
-    similarity: score
+    suggestedCorrect: equivalent(normalizedUserAnswer, correctAnswer),
+    similarity: null
   };
 }
 
-module.exports = {
-  levenshtein,
-  similarity,
-  looksLikeRegex,
-  normalizeChoiceAnswer,
-  buildChoiceDisplay,
-  gradeAnswer
-};
+module.exports = { levenshtein, similarity, looksLikeRegex, normalizeChoiceAnswer, buildChoiceDisplay, gradeAnswer };

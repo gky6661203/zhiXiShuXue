@@ -26,7 +26,7 @@
       <section class="sheet grid-sheet" v-loading="loadingWeakPoints">
         <div class="sheet-head">
           <h2 class="sheet-title">知识方格</h2>
-          <div class="legend">
+          <div class="legend"><span>尚未测评或样本不足 {{ breakdown.unassessed }}</span>
             <span class="legend-item is-mastered"><i></i>已掌握 <b class="nb-num">{{ breakdown.mastered }}</b></span>
             <span class="legend-item is-learning"><i></i>待巩固 <b class="nb-num">{{ breakdown.learning }}</b></span>
             <span class="legend-item is-weak"><i></i>薄弱 <b class="nb-num">{{ breakdown.weak }}</b></span>
@@ -34,7 +34,7 @@
         </div>
         <p class="sheet-note">
           每个知识点一格，格子涂得越满掌握得越好。整体平均掌握度
-          <b class="nb-num avg">{{ averageMastery }}%</b>。点一格就能开始练习。
+          <b class="nb-num avg">{{ averageMastery === null ? '尚未测评' : averageMastery + '%' }}</b>。点一格就能开始练习。
         </p>
 
         <div v-if="groups.length" class="kp-rows">
@@ -46,14 +46,15 @@
                 :key="item.id"
                 type="button"
                 :class="['kp-tile', 'is-' + item.status]"
-                :style="{ '--fill': item.mastery + '%' }"
-                :aria-label="item.name + '，掌握度 ' + item.mastery + '%，' + item.label + '，点击开始练习'"
+                :style="{ '--fill': (item.mastery || 0) + '%' }"
+                :disabled="!item.eligible"
+                :aria-label="item.name + '，' + item.label + (item.mastery === null ? '' : '，参考掌握度 ' + item.mastery + '%') + (item.eligible ? '，点击开始练习' : '，尚未加入已学范围')"
                 @click="practice(item)"
               >
                 <span class="kp-name">{{ item.name }}</span>
                 <span class="kp-foot">
                   <span class="kp-mark" aria-hidden="true">{{ item.mark }}</span>
-                  <span class="kp-rate nb-num">{{ item.mastery }}%</span>
+                  <span class="kp-rate nb-num">{{ item.mastery === null ? item.label : item.mastery + '%' }}</span>
                 </span>
               </button>
             </div>
@@ -62,7 +63,7 @@
         <el-empty v-else-if="!loadingWeakPoints" description="还没有答题记录。做一份作业或一组练习后，这里会填上颜色。" />
       </section>
 
-      <div class="side">
+      <div class="side"><ReviewPlan />
         <!-- 作业 -->
         <section class="sheet" v-loading="loadingAssignments">
           <div class="sheet-head">
@@ -105,6 +106,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import api from '@/utils/api'
+import ReviewPlan from '@/components/ReviewPlan.vue'
 import { NB_CATEGORY } from '@/utils/notebook-colors'
 import { KNOWLEDGE_TREE_SHARED_CONFIG, inferMajorCategory, normalizeStatusLabel, parseMasteryRate } from '@/utils/knowledge-meta'
 
@@ -139,10 +141,11 @@ const greetingWord = computed(() => {
 })
 
 const knowledgeItems = computed(() => weakPointList.value.map((item) => {
-  const mastery = parseMasteryRate(item.masteryRate)
+  const mastery = item.masteryRate === null ? null : parseMasteryRate(item.masteryRate)
   const label = normalizeStatusLabel(item.statusLabel, mastery)
-  const status = STATUS_KEY[label] || 'weak'
+  const status = STATUS_KEY[label] || 'unassessed'
   return {
+    eligible: item.eligible,
     id: item.id,
     name: item.name,
     mastery,
@@ -166,20 +169,20 @@ const groups = computed(() => {
 })
 
 const breakdown = computed(() => {
-  const result = { mastered: 0, learning: 0, weak: 0 }
+  const result = { mastered: 0, learning: 0, weak: 0, unassessed: 0 }
   knowledgeItems.value.forEach((item) => { result[item.status] += 1 })
   return result
 })
 
 const averageMastery = computed(() => {
-  const list = knowledgeItems.value
-  if (!list.length) return 0
+  const list = knowledgeItems.value.filter(item => item.mastery !== null)
+  if (!list.length) return null
   return Math.round(list.reduce((sum, item) => sum + item.mastery, 0) / list.length)
 })
 
 const weakest = computed(() => {
   return knowledgeItems.value
-    .filter(item => item.status !== 'mastered')
+    .filter(item => item.eligible && item.mastery !== null && item.status !== 'mastered')
     .sort((a, b) => a.mastery - b.mastery)[0] || null
 })
 
@@ -199,14 +202,14 @@ const nextStep = computed(() => {
   if (weakest.value) {
     return {
       title: `补一补「${weakest.value.name}」`,
-      detail: `它是你现在掌握度最低的知识点，只有 ${weakest.value.mastery}%。做一组练习，答对了掌握度就会涨。`,
+      detail: `它是你现在掌握度最低的知识点，参考掌握度为 ${weakest.value.mastery}%。继续练习不同题目，样本充足后再判断掌握情况。`,
       primaryText: '开始练习',
       primary: () => practice(weakest.value),
       secondaryText: '看它的前置知识',
       secondary: () => go('/student/knowledge')
     }
   }
-  if (knowledgeItems.value.length) {
+  if (knowledgeItems.value.length && knowledgeItems.value.every(item => item.status === 'mastered')) {
     return {
       title: '所有知识点都达标了',
       detail: '去错题本把以前做错的题再做一遍，巩固一下。',
@@ -218,7 +221,7 @@ const nextStep = computed(() => {
   }
   return {
     title: '从第一份练习开始',
-    detail: '做完之后，系统会算出你每个知识点的掌握度。',
+    detail: '尚未测评的知识点不会判定薄弱。先完成老师布置的作业，或练习班级已经学过的内容。',
     primaryText: '去知识图谱',
     primary: () => go('/student/knowledge'),
     secondaryText: '',
@@ -487,6 +490,8 @@ onMounted(() => {
   gap: 10px;
 }
 
+.kp-tile.is-unassessed { background: #f1f4f9; color: var(--nb-ink-3); }
+.kp-tile:disabled { cursor: default; opacity: 0.65; }
 .kp-tile {
   position: relative;
   display: flex;

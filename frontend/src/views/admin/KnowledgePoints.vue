@@ -27,9 +27,9 @@
           <div class="tree-node">
             <span>{{ scope.data.name }}</span>
             <span class="tree-actions">
-              <el-button type="primary" link size="small" @click="editKP(scope.data)">编辑</el-button>
+              <el-button type="primary" link size="small" @click="editKP(scope.data)" :disabled="scope.data.isCategory">编辑</el-button>
               <el-button type="primary" link size="small" @click="addChild(scope.data)">添加子节点</el-button>
-              <el-button type="danger" link size="small" @click="deleteKP(scope.data)">删除</el-button>
+              <el-button type="danger" link size="small" @click="deleteKP(scope.data)" :disabled="scope.data.isCategory">删除</el-button>
             </span>
           </div>
         </template>
@@ -44,6 +44,8 @@
         <el-form-item label="描述" prop="description">
           <el-input v-model="form.description" type="textarea" :rows="3" placeholder="请输入描述" />
         </el-form-item>
+        <el-form-item label="年级建议"><el-select v-model="form.grade"><el-option label="七年级" :value="7" /><el-option label="八年级" :value="8" /><el-option label="九年级" :value="9" /></el-select></el-form-item>
+        <el-form-item label="前置知识"><el-select v-model="form.prerequisites" multiple filterable><el-option v-for="item in flatNodes.filter(node => node.id !== form.id)" :key="item.id" :label="item.name" :value="item.id" /></el-select></el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -62,6 +64,7 @@ var dialogVisible = ref(false)
 var isEdit = ref(false)
 var formRef = ref(null)
 var knowledgeTree = ref([])
+var flatNodes = ref([])
 
 var form = reactive({ id: '', name: '', description: '', parentId: null, level: 1 })
 var rules = { name: [{ required: true, message: '请输入名称', trigger: 'blur' }] }
@@ -75,6 +78,8 @@ function loadKnowledgePoints() {
     .then(function(res) {
       if (res.success) {
         knowledgeTree.value = res.data
+        const walk = items => items.flatMap(item => item.isCategory ? walk(item.children || []) : [item, ...walk(item.children || [])])
+        flatNodes.value = walk(res.data)
       }
     })
     .catch(function(error) {
@@ -84,6 +89,8 @@ function loadKnowledgePoints() {
 
 function showAddDialog() {
   isEdit.value = false
+  form.grade = 7
+  form.prerequisites = []
   form.id = ''
   form.name = ''
   form.description = ''
@@ -94,6 +101,8 @@ function showAddDialog() {
 
 function editKP(data) {
   isEdit.value = true
+  form.grade = data.grade || 7
+  form.prerequisites = data.prerequisites || []
   form.id = data.id
   form.name = data.name
   form.description = data.description || ''

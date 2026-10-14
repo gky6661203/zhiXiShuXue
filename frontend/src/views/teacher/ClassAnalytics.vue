@@ -20,7 +20,7 @@
           <el-row :gutter="20" v-if="analytics">
             <el-col :xs="12" :sm="12" :md="6">
               <div class="stat-card tone-blue">
-                <div class="stat-value">{{ analytics.avgScore || 0 }}</div>
+                <div class="stat-value">{{ analytics.avgScore ?? '尚无成绩' }}</div>
                 <div class="stat-label">平均分</div>
               </div>
             </el-col>
@@ -234,6 +234,7 @@ function renderLevelChart() {
 
   var levelData = analytics.value && analytics.value.levelDistribution ? analytics.value.levelDistribution : {}
   var data = [
+    { value: levelData.unassessed || 0, name: '尚未测评', itemStyle: { color: '#94a3b8' } },
     { value: levelData.weak || 0, name: '薄弱', itemStyle: { color: CHART_COLORS.weak } },
     { value: levelData.normal || 0, name: '中等', itemStyle: { color: CHART_COLORS.learning } },
     { value: levelData.strong || 0, name: '优秀', itemStyle: { color: CHART_COLORS.mastered } }
@@ -259,12 +260,14 @@ function renderLevelChart() {
 }
 
 function getLevelType(level) {
+  if (level === 'unassessed') return 'info'
   if (level === 'strong') return 'success'
   if (level === 'weak') return 'danger'
   return 'warning'
 }
 
 function getLevelText(level) {
+  if (level === 'unassessed') return '尚未测评'
   if (level === 'strong') return '优秀'
   if (level === 'weak') return '薄弱'
   return '中等'
