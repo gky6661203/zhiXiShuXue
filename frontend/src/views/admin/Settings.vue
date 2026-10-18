@@ -59,6 +59,7 @@
         </el-form-item>
       </el-form>
     </el-card>
+    <AiTutorSettings />
     <DataBackup />
   </div>
 </template>
@@ -68,6 +69,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import api from '@/utils/api'
 import DataBackup from '@/components/DataBackup.vue'
+import AiTutorSettings from '@/components/AiTutorSettings.vue'
 
 var ocrSettings = reactive({ ocrApiKey: '', ocrApiSecret: '' })
 var llmSettings = reactive({ llmApiKey: '', llmApiEndpoint: '' })

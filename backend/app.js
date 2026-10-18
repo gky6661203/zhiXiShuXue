@@ -99,6 +99,7 @@ const teachingRoutes = require("./routes/teaching");
 const accountRoutes = require("./routes/accounts");
 
 app.use("/api/auth", authRoutes);
+app.use("/api/ai-tutor", require("./routes/ai-tutor"));
 app.use(
   "/api/teacher",
   authenticate,

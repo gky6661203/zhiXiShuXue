@@ -1,9 +1,12 @@
 <template>
-  <NotebookShell :menu="menu" subtitle="学习中心" role-label="学生" profile-path="/student/profile" />
+  <NotebookShell :menu="menu" subtitle="学习中心" role-label="学生" profile-path="/student/profile">
+    <template #extra><AiTutorWidget /></template>
+  </NotebookShell>
 </template>
 
 <script setup>
 import NotebookShell from '@/components/NotebookShell.vue'
+import AiTutorWidget from '@/components/AiTutorWidget.vue'
 
 const menu = [
   { index: '/student/dashboard', label: '学习工作台', icon: 'House' },

@@ -51,6 +51,8 @@ var request = {
 }
 
 request.student = {
+  getAiTutorStatus: function () { return request.get('/ai-tutor/status') },
+  askAiTutor: function (data) { return request.post('/ai-tutor/chat', data) },
   getWrongQuestions: function () { return request.get('/student/wrong-questions') },
   getWeakPoints: function () { return request.get('/student/weak-points') },
   getRecommendations: function (params) { return request.get('/student/recommendations', params) },
