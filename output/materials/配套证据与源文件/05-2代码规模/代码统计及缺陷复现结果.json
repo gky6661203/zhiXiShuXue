@@ -1,0 +1,377 @@
+{
+  "head": "ef5efd614008a350e8bbd68447f7ec3496cb1586",
+  "commits": 41,
+  "nonMergeCommits": 28,
+  "logs": [
+    {
+      "hash": "f4bf264f",
+      "date": "2026-03-31",
+      "author": "tianya-create",
+      "msg": "first commit"
+    },
+    {
+      "hash": "4dc1cba1",
+      "date": "2026-04-05",
+      "author": "苟开源",
+      "msg": "完成初步闭环"
+    },
+    {
+      "hash": "cc1fa05b",
+      "date": "2026-04-06",
+      "author": "tianya-create",
+      "msg": "完成了教师端的全部功能"
+    },
+    {
+      "hash": "be82dd91",
+      "date": "2026-04-08",
+      "author": "苟开源",
+      "msg": "完善了薄弱补练"
+    },
+    {
+      "hash": "56df048f",
+      "date": "2026-04-10",
+      "author": "苟开源",
+      "msg": "修复了一些已知问题"
+    },
+    {
+      "hash": "f817984b",
+      "date": "2026-04-13",
+      "author": "tianya-create",
+      "msg": "进一步完善相关功能"
+    },
+    {
+      "hash": "8c03c196",
+      "date": "2026-04-23",
+      "author": "苟开源",
+      "msg": "学生端功能基本实现，增加了AI小智"
+    },
+    {
+      "hash": "68a3a028",
+      "date": "2026-04-24",
+      "author": "苟开源",
+      "msg": "优化UI"
+    },
+    {
+      "hash": "e59f759e",
+      "date": "2026-04-25",
+      "author": "tianya-create",
+      "msg": "保存index.css的本地修改"
+    },
+    {
+      "hash": "c4776373",
+      "date": "2026-04-25",
+      "author": "tianya-create",
+      "msg": "重塑整体风格"
+    },
+    {
+      "hash": "041f3fa9",
+      "date": "2026-04-25",
+      "author": "tianya-create",
+      "msg": "调整整体风格"
+    },
+    {
+      "hash": "755c4c93",
+      "date": "2026-04-26",
+      "author": "苟开源",
+      "msg": "重新设计了登录界面"
+    },
+    {
+      "hash": "794c131c",
+      "date": "2026-04-26",
+      "author": "苟开源",
+      "msg": "调整logo"
+    },
+    {
+      "hash": "4c2bc6a5",
+      "date": "2026-04-29",
+      "author": "tianya-create",
+      "msg": "add .gitignore to exclude sqlite file"
+    },
+    {
+      "hash": "62bc7e35",
+      "date": "2026-04-29",
+      "author": "tianya-create",
+      "msg": "Update questions.sqlite"
+    },
+    {
+      "hash": "1e6cfb58",
+      "date": "2026-04-29",
+      "author": "tianya-create",
+      "msg": "优化界面"
+    },
+    {
+      "hash": "75fd3fe7",
+      "date": "2026-04-29",
+      "author": "tianya-create",
+      "msg": "Revert \"优化界面\""
+    },
+    {
+      "hash": "2fe52f40",
+      "date": "2026-04-30",
+      "author": "苟开源",
+      "msg": "修复了一些已知问题"
+    },
+    {
+      "hash": "fa3cd949",
+      "date": "2026-05-19",
+      "author": "Fancl",
+      "msg": "Optimize UI styling"
+    },
+    {
+      "hash": "7ccb0ca9",
+      "date": "2026-06-08",
+      "author": "Fancl",
+      "msg": "调节了操作部分按钮的ui"
+    },
+    {
+      "hash": "57dd0c41",
+      "date": "2026-06-08",
+      "author": "Fancl",
+      "msg": "学生端我的作业ui显示调整"
+    },
+    {
+      "hash": "193845fd",
+      "date": "2026-06-09",
+      "author": "苟开源",
+      "msg": "更改了AI模型"
+    },
+    {
+      "hash": "7ae3508d",
+      "date": "2026-06-10",
+      "author": "苟开源",
+      "msg": "清空了gitignore文件，API可以上传"
+    },
+    {
+      "hash": "623a51ad",
+      "date": "2026-06-10",
+      "author": "苟开源",
+      "msg": "恢复.gitignore，移除node_modules的git追踪，保留.env文件"
+    },
+    {
+      "hash": "02598c67",
+      "date": "2026-06-10",
+      "author": "苟开源",
+      "msg": "添加postinstall脚本，pnpm install时自动安装前后端依赖"
+    },
+    {
+      "hash": "fda074f0",
+      "date": "2026-10-13",
+      "author": "苟开源",
+      "msg": "优化了前端，修改了一些已知问题"
+    },
+    {
+      "hash": "10d241d7",
+      "date": "2026-10-14",
+      "author": "苟开源",
+      "msg": "完成更新"
+    },
+    {
+      "hash": "ef5efd61",
+      "date": "2026-10-18",
+      "author": "苟开源",
+      "msg": "恢复AI"
+    }
+  ],
+  "versions": {
+    "vue": "3.5.31",
+    "element-plus": "2.13.6",
+    "vite": "5.4.21",
+    "pinia": "2.3.1",
+    "vue-router": "4.6.4",
+    "echarts": "5.6.0",
+    "axios": "1.14.0",
+    "express": "4.22.1",
+    "jsonwebtoken": "9.0.3",
+    "bcryptjs": "2.4.3",
+    "multer": "1.4.5-lts.2",
+    "ws": "8.20.0",
+    "jest": "29.7.0"
+  },
+  "node": "v24.11.1",
+  "sqlite": "3.50.4",
+  "frontend": {
+    "files": 68,
+    "total": 18596,
+    "nonempty": 16643,
+    "list": [
+      "frontend/src/App.vue",
+      "frontend/src/components/AccountCreate.vue",
+      "frontend/src/components/AiTutorSettings.vue",
+      "frontend/src/components/AiTutorWidget.vue",
+      "frontend/src/components/Aurora.vue",
+      "frontend/src/components/ClassCurriculum.vue",
+      "frontend/src/components/ColorBends.vue",
+      "frontend/src/components/DataBackup.vue",
+      "frontend/src/components/FloatingLines.vue",
+      "frontend/src/components/HelloWorld.vue",
+      "frontend/src/components/MathText.vue",
+      "frontend/src/components/NotebookShell.vue",
+      "frontend/src/components/QuestionBankManager.vue",
+      "frontend/src/components/QuestionCard.vue",
+      "frontend/src/components/QuestionTools.vue",
+      "frontend/src/components/ReviewPlan.vue",
+      "frontend/src/composables/useAnswerDraft.js",
+      "frontend/src/layouts/AdminLayout.vue",
+      "frontend/src/layouts/StudentLayout.vue",
+      "frontend/src/layouts/TeacherLayout.vue",
+      "frontend/src/main.js",
+      "frontend/src/router/index.js",
+      "frontend/src/stores/user.js",
+      "frontend/src/style.css",
+      "frontend/src/styles/index.css",
+      "frontend/src/styles/notebook.css",
+      "frontend/src/utils/api.js",
+      "frontend/src/utils/browser-check.js",
+      "frontend/src/utils/chart-theme.js",
+      "frontend/src/utils/graph-cache.js",
+      "frontend/src/utils/knowledge-meta.js",
+      "frontend/src/utils/log-text.js",
+      "frontend/src/utils/math-render.js",
+      "frontend/src/utils/notebook-colors.js",
+      "frontend/src/utils/sentry.js",
+      "frontend/src/utils/websocket.js",
+      "frontend/src/views/Login.vue",
+      "frontend/src/views/NotFound.vue",
+      "frontend/src/views/admin/Classes.vue",
+      "frontend/src/views/admin/Dashboard.vue",
+      "frontend/src/views/admin/KnowledgePoints.vue",
+      "frontend/src/views/admin/Logs.vue",
+      "frontend/src/views/admin/Questions.vue",
+      "frontend/src/views/admin/Settings.vue",
+      "frontend/src/views/admin/Statistics.vue",
+      "frontend/src/views/admin/Users.vue",
+      "frontend/src/views/student/AssignmentDetail.vue",
+      "frontend/src/views/student/Assignments.vue",
+      "frontend/src/views/student/Dashboard.vue",
+      "frontend/src/views/student/Knowledge.vue",
+      "frontend/src/views/student/KnowledgeGraph.vue",
+      "frontend/src/views/student/LearningTrack.vue",
+      "frontend/src/views/student/Practice.vue",
+      "frontend/src/views/student/Profile.vue",
+      "frontend/src/views/student/WeakPoints.vue",
+      "frontend/src/views/student/WeakPractice.vue",
+      "frontend/src/views/student/WrongQuestions.vue",
+      "frontend/src/views/teacher/Assignments.vue",
+      "frontend/src/views/teacher/ClassAnalytics.vue",
+      "frontend/src/views/teacher/Classes.vue",
+      "frontend/src/views/teacher/Dashboard.vue",
+      "frontend/src/views/teacher/Grading.vue",
+      "frontend/src/views/teacher/Papers.vue",
+      "frontend/src/views/teacher/Profile.vue",
+      "frontend/src/views/teacher/Questions.vue",
+      "frontend/src/views/teacher/ReviewCenter.vue",
+      "frontend/src/views/teacher/StudentAnalytics.vue",
+      "frontend/src/views/teacher/Students.vue"
+    ]
+  },
+  "backend": {
+    "files": 39,
+    "total": 8176,
+    "nonempty": 7533,
+    "list": [
+      "backend/app.js",
+      "backend/cron/dailySnapshot.js",
+      "backend/database/business-store.js",
+      "backend/database/memory-db.js",
+      "backend/database/migrate-questions-to-sqlite.js",
+      "backend/database/question-store.js",
+      "backend/ensure-port-free.js",
+      "backend/jest.config.js",
+      "backend/middleware/access.js",
+      "backend/models/index.js",
+      "backend/routes/accounts.js",
+      "backend/routes/admin.js",
+      "backend/routes/ai-tutor.js",
+      "backend/routes/auth.js",
+      "backend/routes/common.js",
+      "backend/routes/student.js",
+      "backend/routes/teacher.js",
+      "backend/routes/teaching.js",
+      "backend/seed/demo_data.js",
+      "backend/server.js",
+      "backend/services/ai-tutor.js",
+      "backend/services/analytics.js",
+      "backend/services/autoGrade.js",
+      "backend/services/curriculum.js",
+      "backend/services/knowledge-graph.js",
+      "backend/services/learning.js",
+      "backend/services/manual-question-bank.js",
+      "backend/services/masteryEngine.js",
+      "backend/services/math-bank.js",
+      "backend/services/math-equivalence.js",
+      "backend/services/mistakeTagging.js",
+      "backend/services/personalized-push.js",
+      "backend/services/practice-question-seeds.js",
+      "backend/services/question-cache.js",
+      "backend/services/question-quality.js",
+      "backend/services/recommendation.js",
+      "backend/services/upload-path.js",
+      "backend/services/uploads.js",
+      "backend/websocket/server.js"
+    ]
+  },
+  "tests": {
+    "files": 6,
+    "total": 816,
+    "nonempty": 796,
+    "list": [
+      "backend/test/ai-tutor.test.js",
+      "backend/test/browser-fixture.js",
+      "backend/test/real-learning.test.js",
+      "backend/test/setup.js",
+      "backend/test/smart-learning.test.js",
+      "backend/test/workflow.test.js"
+    ]
+  },
+  "defects": [
+    {
+      "id": "D01",
+      "name": "分数与小数等价答案误判",
+      "q": {
+        "type": "fill",
+        "answer": "1/2"
+      },
+      "a": "0.5",
+      "before": {
+        "isCorrect": false,
+        "correctAnswer": "1/2",
+        "explanation": "",
+        "userAnswer": "0.5",
+        "similarity": 0
+      },
+      "after": {
+        "needsReview": false,
+        "isCorrect": true,
+        "correctAnswer": "1/2",
+        "explanation": "",
+        "userAnswer": "0.5",
+        "similarity": 1
+      }
+    },
+    {
+      "id": "D02",
+      "name": "主观题绕过步骤复核",
+      "q": {
+        "type": "subjective",
+        "answer": "同类项系数相加，得到5x。"
+      },
+      "a": "同类项系数相加，得到5x。",
+      "before": {
+        "isCorrect": true,
+        "correctAnswer": "同类项系数相加，得到5x。",
+        "explanation": "",
+        "userAnswer": "同类项系数相加，得到5x。",
+        "similarity": 1
+      },
+      "after": {
+        "isCorrect": null,
+        "needsReview": true,
+        "correctAnswer": "同类项系数相加，得到5x。",
+        "explanation": "",
+        "userAnswer": "同类项系数相加，得到5x。",
+        "suggestedCorrect": true,
+        "similarity": null
+      }
+    }
+  ]
+}

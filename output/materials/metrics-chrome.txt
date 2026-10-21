@@ -1,0 +1,32 @@
+### Result
+{"label":"chrome","ua":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36","date":"2026-10-19","loads":[{"domContentLoaded":518.3,"appReady":650,"load":519.1},{"domContentLoaded":149.9,"appReady":305.7,"load":154.3},{"domContentLoaded":149.7,"appReady":332,"load":156.7},{"domContentLoaded":1760.7,"appReady":1923.8,"load":1765.2},{"domContentLoaded":1342.6,"appReady":1483.7,"load":1344.9}],"api":{"assignments":[{"ms":751.3,"status":200,"success":true},{"ms":1859.3,"status":200,"success":true},{"ms":733.7,"status":200,"success":true},{"ms":131.4,"status":200,"success":true},{"ms":120.7,"status":200,"success":true}],"roleCheck":403},"graphTitle":"知识图谱 - 智析数学"}
+### Ran Playwright code
+```js
+await (async (page) => {
+ const root='C:/Users/32328/Desktop/zhiXiShuXue/output/playwright/materials/';
+ const ua=await page.evaluate(()=>navigator.userAgent),label=ua.includes('Edg/')?'edge':'chrome';
+ await page.goto('http://123.56.75.115/student/dashboard',{waitUntil:'domcontentloaded'});
+ await page.locator('main h1').waitFor();
+ await page.getByRole('heading',{name:'知识方格'}).waitFor();
+ await page.screenshot({path:root+'online-'+label+'-student.png',timeout:15000});
+ const loads=[];
+ for(let i=0;i<5;i++){
+  await page.reload({waitUntil:'domcontentloaded'});
+  await page.getByRole('heading',{name:'知识方格'}).waitFor();
+  loads.push(await page.evaluate(()=>{const n=performance.getEntriesByType('navigation')[0];return {domContentLoaded:+n.domContentLoadedEventEnd.toFixed(2),appReady:+performance.now().toFixed(2),load:+n.loadEventEnd.toFixed(2)}}));
+ }
+ const api=await page.evaluate(async()=>{
+  const headers={Authorization:'Bearer '+localStorage.getItem('token')};
+  const rows=[];for(let i=0;i<5;i++){const t=performance.now();const r=await fetch('/api/student/assignments',{headers});const d=await r.json();rows.push({ms:+(performance.now()-t).toFixed(2),status:r.status,success:d.success});}
+  const r=await fetch('/api/teacher/classes',{headers});return {assignments:rows,roleCheck:r.status};
+ });
+ await page.goto('http://123.56.75.115/student/knowledge',{waitUntil:'domcontentloaded'});
+ await page.getByRole('heading',{name:'知识图谱',exact:true}).waitFor();
+ await page.locator('canvas').first().waitFor();
+ await page.screenshot({path:root+'online-'+label+'-knowledge.png',timeout:15000});
+ return {label,ua,date:'2026-10-19',loads,api,graphTitle:await page.title()};
+}
+)(page);
+```
+### Events
+- New console entries: .playwright-cli\console-2026-10-19T06-22-47-754Z.log#L2

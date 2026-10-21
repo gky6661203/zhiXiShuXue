@@ -1,0 +1,18 @@
+### Result
+{"auth":true,"title":"班级学情 - 智析数学","body":"班级学情分析\n\n全班的分数、层次和薄弱知识点。排在最上面的知识点，最值得在课堂上再讲一遍。\n\n选择班级\n七年级一班\n85\n平均分\n10\n学生人数\n14\n已完成作业\n18%\n知识点平均掌握度\n学生成绩排名\n学生\n\t\n得分\n\t\n层次\n李明\n\t\n85\n\t\n中等\n\n\n王芳\n\t\n\t\n尚未测评\n\n\n张伟\n\t\n\t\n尚未测评\n\n\n刘洋\n\t\n\t\n尚未测评\n\n\n陈静\n\t\n\t\n尚未测评\n\n\n赵强\n\t\n\t\n尚未测评\n\n\n孙丽\n\t\n\t\n尚未测评\n\n\n周杰\n\t\n\t\n尚未测评\n\n\n吴敏\n\t\n\t\n尚未测评\n\n\n郑华\n\t\n\t\n尚未测评\n学生层次分布\n薄弱知识点统计\n高频错题类型统计"}
+### Ran Playwright code
+```js
+await (async(page)=>{
+ const root='C:/Users/32328/Desktop/zhiXiShuXue/output/playwright/materials/';
+ const auth=await page.evaluate(async()=>{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:'teacher',password:'__TEACHER_PASSWORD__'})});const j=await r.json();if(!j.success)throw Error('Teacher login failed');localStorage.setItem('token',j.data.token);localStorage.setItem('user',JSON.stringify(j.data.user));return j.success;});
+ await page.goto('http://123.56.75.115/teacher/analytics/class',{waitUntil:'domcontentloaded'});
+ await page.getByRole('heading',{name:'班级学情分析'}).waitFor({timeout:45000});
+ await page.locator('canvas').first().waitFor();
+ await page.screenshot({path:root+'online-teacher-class.png',timeout:20000});
+ return {auth,title:await page.title(),body:(await page.locator('main').innerText()).slice(0,1000)};
+}
+)(page);
+```
+### Page
+- Page URL: http://123.56.75.115/teacher/analytics/class
+- Page Title: 班级学情 - 智析数学

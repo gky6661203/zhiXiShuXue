@@ -1,0 +1,28 @@
+ef5efd61 2026-10-18 苟开源 恢复AI
+10d241d7 2026-10-14 苟开源 完成更新
+fda074f0 2026-10-13 苟开源 优化了前端，修改了一些已知问题
+02598c67 2026-06-10 苟开源 添加postinstall脚本，pnpm install时自动安装前后端依赖
+623a51ad 2026-06-10 苟开源 恢复.gitignore，移除node_modules的git追踪，保留.env文件
+7ae3508d 2026-06-10 苟开源 清空了gitignore文件，API可以上传
+193845fd 2026-06-09 苟开源 更改了AI模型
+57dd0c41 2026-06-08 Fancl 学生端我的作业ui显示调整
+7ccb0ca9 2026-06-08 Fancl 调节了操作部分按钮的ui
+fa3cd949 2026-05-19 Fancl Optimize UI styling
+2fe52f40 2026-04-30 苟开源 修复了一些已知问题
+75fd3fe7 2026-04-29 tianya-create Revert "优化界面"
+1e6cfb58 2026-04-29 tianya-create 优化界面
+62bc7e35 2026-04-29 tianya-create Update questions.sqlite
+4c2bc6a5 2026-04-29 tianya-create add .gitignore to exclude sqlite file
+794c131c 2026-04-26 苟开源 调整logo
+755c4c93 2026-04-26 苟开源 重新设计了登录界面
+041f3fa9 2026-04-25 tianya-create 调整整体风格
+c4776373 2026-04-25 tianya-create 重塑整体风格
+e59f759e 2026-04-25 tianya-create 保存index.css的本地修改
+68a3a028 2026-04-24 苟开源 优化UI
+8c03c196 2026-04-23 苟开源 学生端功能基本实现，增加了AI小智
+f817984b 2026-04-13 tianya-create 进一步完善相关功能
+56df048f 2026-04-10 苟开源 修复了一些已知问题
+be82dd91 2026-04-08 苟开源 完善了薄弱补练
+cc1fa05b 2026-04-06 tianya-create 完成了教师端的全部功能
+4dc1cba1 2026-04-05 苟开源 完成初步闭环
+f4bf264f 2026-03-31 tianya-create first commit

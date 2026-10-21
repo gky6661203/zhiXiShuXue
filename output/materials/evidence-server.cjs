@@ -1,0 +1,2 @@
+const http=require('http'),fs=require('fs'),path=require('path');
+http.createServer((req,res)=>{const name=path.basename(new URL(req.url,'http://localhost').pathname);if(!/^[\w-]+\.html$/.test(name)){res.writeHead(404).end();return}const p=path.join(__dirname,name);if(!fs.existsSync(p)){res.writeHead(404).end();return}res.setHeader('Content-Type','text/html;charset=utf-8');fs.createReadStream(p).pipe(res)}).listen(5010,'127.0.0.1',()=>console.log('Evidence preview on 5010'));

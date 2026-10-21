@@ -1,7 +1,7 @@
 {
-  "head": "10d241d7956ec4a2e3824b9ea75121fcaff20350",
-  "commits": 40,
-  "nonMergeCommits": 27,
+  "head": "ef5efd614008a350e8bbd68447f7ec3496cb1586",
+  "commits": 41,
+  "nonMergeCommits": 28,
   "logs": [
     {
       "hash": "f4bf264f",
@@ -164,6 +164,12 @@
       "date": "2026-10-14",
       "author": "苟开源",
       "msg": "完成更新"
+    },
+    {
+      "hash": "ef5efd61",
+      "date": "2026-10-18",
+      "author": "苟开源",
+      "msg": "恢复AI"
     }
   ],
   "versions": {
@@ -184,12 +190,14 @@
   "node": "v24.11.1",
   "sqlite": "3.50.4",
   "frontend": {
-    "files": 66,
-    "total": 17639,
-    "nonempty": 15789,
+    "files": 68,
+    "total": 18596,
+    "nonempty": 16643,
     "list": [
       "frontend/src/App.vue",
       "frontend/src/components/AccountCreate.vue",
+      "frontend/src/components/AiTutorSettings.vue",
+      "frontend/src/components/AiTutorWidget.vue",
       "frontend/src/components/Aurora.vue",
       "frontend/src/components/ClassCurriculum.vue",
       "frontend/src/components/ColorBends.vue",
@@ -257,9 +265,9 @@
     ]
   },
   "backend": {
-    "files": 37,
-    "total": 7761,
-    "nonempty": 7148,
+    "files": 39,
+    "total": 8176,
+    "nonempty": 7533,
     "list": [
       "backend/app.js",
       "backend/cron/dailySnapshot.js",
@@ -273,6 +281,7 @@
       "backend/models/index.js",
       "backend/routes/accounts.js",
       "backend/routes/admin.js",
+      "backend/routes/ai-tutor.js",
       "backend/routes/auth.js",
       "backend/routes/common.js",
       "backend/routes/student.js",
@@ -280,6 +289,7 @@
       "backend/routes/teaching.js",
       "backend/seed/demo_data.js",
       "backend/server.js",
+      "backend/services/ai-tutor.js",
       "backend/services/analytics.js",
       "backend/services/autoGrade.js",
       "backend/services/curriculum.js",
@@ -301,10 +311,11 @@
     ]
   },
   "tests": {
-    "files": 5,
-    "total": 744,
-    "nonempty": 725,
+    "files": 6,
+    "total": 816,
+    "nonempty": 796,
     "list": [
+      "backend/test/ai-tutor.test.js",
       "backend/test/browser-fixture.js",
       "backend/test/real-learning.test.js",
       "backend/test/setup.js",

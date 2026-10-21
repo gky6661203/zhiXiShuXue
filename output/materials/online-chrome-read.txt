@@ -1,0 +1,32 @@
+### Result
+{"label":"chrome","profile":{"status":200,"body":{"success":true,"data":{"id":"student-001","studentNo":"2024001","name":"李明","gender":"male","classId":"class-001","class":{"id":"class-001","name":"七年级一班"}}}},"assignments":{"status":200,"body":{"success":true,"data":[{"id":"assignment-001","title":"第一次测试","paperId":"paper-001","classId":"class-001","teacherId":"teacher-001","studentIds":["student-001","student-002","student-003","student-004","student-005","student-006","student-007","student-008","student-009","student-010"],"deadline":"2026-10-18T15:42:15.798Z","type":"exam","level":"normal","status":"published","createdAt":"2026-10-16T15:42:15.798Z","updatedAt":"2026-10-16T15:42:15.798Z","questionCount":5,"submitted":true,"score":60,"paperTitle":"第一次测试卷"},{"id":"assignment-003","title":"主观题测试","paperId":"paper-003","classId":"class-001","teacherId":"teacher-001","studentIds":["student-001","student-002","student-003","student-004","student-005","student-006","student-007","student-008","student-009","student-010"],"deadline":"2026-10-18T15:42:15.798Z","type":"exam","level":"normal","status":"published","createdAt":"2026-10-16T15:42:15.798Z","updatedAt":"2026-10-16T15:42:15.798Z","questionCount":3,"submitted":true,"score":15,"paperTitle":"主观题测试卷"},{"id":"assignment-002","title":"第二次测试","paperId":"paper-002","classId":"class-001","teacherId":"teacher-001","studentIds":["student-001","student-002","student-003","student-004","student-005","student-006","student-007","student-008","student-009","student-010"],"deadline":"2026-10-18T15:42:15.798Z","type":"exam","level":"normal","status":"published","createdAt":"2026-10-17T15:42:15.798Z","updatedAt":"2026-10-17T15:42:15.798Z","questionCount":5,"submitted":false,"paperTitle":"第二次测试卷"},{"questionIds":["f95c0aee-e08e-4d8b-9a05-eca84858f89a"],"title":"E2E 复核作业","paperId":"1ac6e2a3-5d1c-4112-8afe-79de6c1cc62a","classId":"class-001","teacherId":"teacher-001","studentIds":[],"type":"homework","level":"strong","levels":["strong","medium","weak"],"status":"published","createdAt":"2026-10-19T03:26:07.412Z","id":"c9bad1cd-5aff-47c7-9893-cc53b5e44737","updatedAt":"2026-10-19T03:26:07.412Z","questionCount":1,"submitted":true,"score":10,"paperTitle":"E2E 复核作业-题目集"},{"questionIds":["2bc4a1e2-34d9-485a-9f5e-9bfc8d1852c7"],"title":"E2E 复核作业","paperId":"d18b02ae-5f51-438a-954e-bbd4287d5547","classId":"class-001","teacherId":"teacher-001","studentIds":[],"type":"homework","level":"strong","levels":["strong","medium","weak"],"status":"published","createdAt":"2026-10-19T03:29:10.974Z","id":"431cf512-b37f-4486-bb52-b47b741fc0ff","updatedAt":"2026-10-19T03:29:10.974Z","questionCount":1,"submitted":true,"score":10,"paperTitle":"E2E 复核作业-题目集"},{"questionIds":["c6f3ed57-0d04-4b53-a9bc-8eef0008d956"],"title":"E2E 复核作业","paperId":"c89b4a7c-2912-4608-b543-8a19605561a4","classId":"class-001","teacherId":"teacher-001","studentIds":[],"type":"homework","level":"strong","levels":["strong","medium","weak"],"status":"published","createdAt":"2026-10-19T03:40:27.791Z","id":"238e8c48-6933-41d3-996a-37757c1bb623","updatedAt":"2026-10-19T03:40:27.791Z","questionCount":1,"submitted":true,"score":10,"paperTitle":"E2E 复核作业-题目集"},{"questionIds":["326e654e-2b3b-4f2c-a28b-414e19d9c92b"],"title":"E2E 复核作业","paperId":"7511c8d3-62d8-4696-91e3-28af87086f44","classId":"class-001","teacherId":"teacher-001","studentIds":[],"type":"homework","level":"strong","levels":["strong","medium","weak"],"status":"published","createdAt":"2026-10-19T05:35:43.504Z","id":"a3cd29c7-ca97-4038-b1c4-65c28775259b","updatedAt":"2026-10-19T05:35:43.504Z","questionCount":1,"submitted":true,"score":0,"paperTitle":"E2E 复核作业-题目集"}]}},"denied":{"status":403,"body":{"success":false,"message":"无权访问此功能"}},"body":""}
+### Ran Playwright code
+```js
+await (async (page) => {
+ await page.setViewportSize({width:1440,height:1000});
+ const label=(await page.evaluate(()=>navigator.userAgent)).includes('Edg/')?'edge':'chrome';
+ if(!page.url().includes('/student/')){
+ await page.getByRole('textbox',{name:'请输入用户名'}).fill('student');
+ await page.getByRole('textbox',{name:'请输入密码'}).fill('__STUDENT_PASSWORD__');
+ await page.getByRole('button',{name:'登 录'}).click();
+ await page.waitForURL('**/student/dashboard');
+ }
+ await page.waitForLoadState('domcontentloaded');
+ await page.screenshot({path:'C:/Users/32328/Desktop/zhiXiShuXue/output/playwright/materials/online-'+label+'-student.png'});
+ const results=await page.evaluate(async()=>{
+  const token=localStorage.getItem('token');
+  const get=async(p)=>{const r=await fetch('/api'+p,{headers:{Authorization:'Bearer '+token}});return {status:r.status,body:await r.json()}};
+  return {profile:await get('/student/profile'),assignments:await get('/student/assignments'),denied:await get('/teacher/classes')};
+ });
+ await page.goto('http://123.56.75.115/student/knowledge');
+ await page.waitForLoadState('domcontentloaded');
+ await page.screenshot({path:'C:/Users/32328/Desktop/zhiXiShuXue/output/playwright/materials/online-'+label+'-knowledge.png'});
+ return {label,...results,body:(await page.locator('body').innerText()).slice(0,600)};
+}
+)(page);
+```
+### Page
+- Page URL: http://123.56.75.115/student/knowledge
+- Page Title: 知识图谱 - 智析数学
+### Events
+- New console entries: .playwright-cli\console-2026-10-19T06-22-47-754Z.log#L1

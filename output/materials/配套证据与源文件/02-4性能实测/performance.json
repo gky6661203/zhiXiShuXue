@@ -1,0 +1,259 @@
+{
+  "metrics": {
+    "chrome": {
+      "label": "chrome",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+      "date": "2026-10-19",
+      "loads": [
+        {
+          "domContentLoaded": 518.3,
+          "appReady": 650,
+          "load": 519.1
+        },
+        {
+          "domContentLoaded": 149.9,
+          "appReady": 305.7,
+          "load": 154.3
+        },
+        {
+          "domContentLoaded": 149.7,
+          "appReady": 332,
+          "load": 156.7
+        },
+        {
+          "domContentLoaded": 1760.7,
+          "appReady": 1923.8,
+          "load": 1765.2
+        },
+        {
+          "domContentLoaded": 1342.6,
+          "appReady": 1483.7,
+          "load": 1344.9
+        }
+      ],
+      "api": {
+        "assignments": [
+          {
+            "ms": 751.3,
+            "status": 200,
+            "success": true
+          },
+          {
+            "ms": 1859.3,
+            "status": 200,
+            "success": true
+          },
+          {
+            "ms": 733.7,
+            "status": 200,
+            "success": true
+          },
+          {
+            "ms": 131.4,
+            "status": 200,
+            "success": true
+          },
+          {
+            "ms": 120.7,
+            "status": 200,
+            "success": true
+          }
+        ],
+        "roleCheck": 403
+      },
+      "graphTitle": "知识图谱 - 智析数学"
+    },
+    "edge": {
+      "label": "edge",
+      "ua": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36 Edg/155.0.0.0",
+      "date": "2026-10-19",
+      "loads": [
+        {
+          "domContentLoaded": 252.1,
+          "appReady": 375.2,
+          "load": 252.7
+        },
+        {
+          "domContentLoaded": 1239.2,
+          "appReady": 1352.6,
+          "load": 1241.5
+        },
+        {
+          "domContentLoaded": 139.4,
+          "appReady": 262.9,
+          "load": 140.1
+        },
+        {
+          "domContentLoaded": 550.6,
+          "appReady": 664.6,
+          "load": 552.5
+        },
+        {
+          "domContentLoaded": 888.1,
+          "appReady": 1013.9,
+          "load": 888.8
+        }
+      ],
+      "api": {
+        "assignments": [
+          {
+            "ms": 2337.9,
+            "status": 200,
+            "success": true
+          },
+          {
+            "ms": 1973.4,
+            "status": 200,
+            "success": true
+          },
+          {
+            "ms": 320.8,
+            "status": 200,
+            "success": true
+          },
+          {
+            "ms": 1472.9,
+            "status": 200,
+            "success": true
+          },
+          {
+            "ms": 3585.2,
+            "status": 200,
+            "success": true
+          }
+        ],
+        "roleCheck": 403
+      },
+      "graphVisible": true,
+      "graphTitle": "知识图谱 - 智析数学"
+    }
+  },
+  "api": {
+    "date": "2026-10-19",
+    "teacherLogin": true,
+    "adminLogin": true,
+    "classes": [
+      {
+        "id": "class-001",
+        "name": "七年级一班",
+        "grade": "七年级",
+        "teacherId": "teacher-001",
+        "students": [
+          "student-001",
+          "student-002",
+          "student-003",
+          "student-004",
+          "student-005",
+          "student-006",
+          "student-007",
+          "student-008",
+          "student-009",
+          "student-010"
+        ],
+        "createdAt": "2026-10-18T15:42:15.751Z",
+        "updatedAt": "2026-10-19T05:35:43.161Z",
+        "taughtKnowledgePointIds": [],
+        "textbookVersion": "人教版",
+        "studentCount": 10
+      }
+    ],
+    "settings": {
+      "data.llmApiEndpoint": "",
+      "data.llmModel": ""
+    },
+    "questionCount": 2265,
+    "submissions": [
+      {
+        "student": "student2",
+        "status": 200,
+        "ms": 359.1,
+        "success": true,
+        "recordId": "e9eb0b24-c60c-4025-a345-c23884f73de6"
+      },
+      {
+        "student": "student3",
+        "status": 200,
+        "ms": 216.79,
+        "success": true,
+        "recordId": "40701c5d-b772-4710-a161-5f2edc240525"
+      },
+      {
+        "student": "student4",
+        "status": 200,
+        "ms": 534.38,
+        "success": true,
+        "recordId": "dddc59de-3628-4c77-8f0b-3caebafaf98c"
+      },
+      {
+        "student": "student5",
+        "status": 200,
+        "ms": 792.95,
+        "success": true,
+        "recordId": "a838e220-81c7-401f-8504-2f6c62a50aa6"
+      },
+      {
+        "student": "student6",
+        "status": 200,
+        "ms": 218.57,
+        "success": true,
+        "recordId": "38d61eb8-d7a0-4583-bf2c-7c5fdd1ea25e"
+      }
+    ],
+    "uploads": [
+      {
+        "student": "student2",
+        "status": 200,
+        "ms": 461.55,
+        "success": true,
+        "size": 68,
+        "filePath": "/uploads/answers/647cb3f1-3dab-44c4-9135-914f2650744c.png"
+      },
+      {
+        "student": "student3",
+        "status": 200,
+        "ms": 225.46,
+        "success": true,
+        "size": 68,
+        "filePath": "/uploads/answers/1561d4d2-3a3b-4b83-ab2d-d6c0c8cd413b.png"
+      },
+      {
+        "student": "student4",
+        "status": 200,
+        "ms": 276.04,
+        "success": true,
+        "size": 68,
+        "filePath": "/uploads/answers/c1503a3e-2dc1-4f96-a0ad-0b38aa016d9c.png"
+      },
+      {
+        "student": "student5",
+        "status": 200,
+        "ms": 232.38,
+        "success": true,
+        "size": 68,
+        "filePath": "/uploads/answers/41be8e06-daa6-4920-99b2-ace4bd031ecf.png"
+      },
+      {
+        "student": "student6",
+        "status": 200,
+        "ms": 177.95,
+        "success": true,
+        "size": 68,
+        "filePath": "/uploads/answers/8b38feea-b88d-47f9-99c0-60ab95f1c7c6.png"
+      }
+    ],
+    "creation": {
+      "status": 200,
+      "success": true,
+      "id": "553988a4-773d-40aa-914f-2b9f1106b016",
+      "paperId": "30031c83-da94-4704-96c3-9658bfd50545"
+    },
+    "uploadTotalMs": 462.02,
+    "cleanup": {
+      "assignmentStatus": 200,
+      "success": true,
+      "uploadedTestFilesRetained": 5,
+      "paperStatus": 200,
+      "paperDeleted": true
+    }
+  }
+}

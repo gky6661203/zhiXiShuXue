@@ -1,0 +1,82 @@
+{
+  "versions": {
+    "vue": "3.5.31",
+    "element-plus": "2.13.6",
+    "vite": "5.4.21",
+    "pinia": "2.3.1",
+    "vue-router": "4.6.4",
+    "echarts": "5.6.0",
+    "axios": "1.14.0",
+    "express": "4.22.1",
+    "jsonwebtoken": "9.0.3",
+    "bcryptjs": "2.4.3",
+    "multer": "1.4.5-lts.2",
+    "ws": "8.20.0",
+    "jest": "29.7.0"
+  },
+  "node": "v24.11.1",
+  "sqlite": "3.50.4",
+  "commits": 41,
+  "nonMergeCommits": 28,
+  "frontend": {
+    "files": 68,
+    "total": 18596,
+    "nonempty": 16643
+  },
+  "backend": {
+    "files": 39,
+    "total": 8176,
+    "nonempty": 7533
+  },
+  "defects": [
+    {
+      "id": "D01",
+      "name": "分数与小数等价答案误判",
+      "q": {
+        "type": "fill",
+        "answer": "1/2"
+      },
+      "a": "0.5",
+      "before": {
+        "isCorrect": false,
+        "correctAnswer": "1/2",
+        "explanation": "",
+        "userAnswer": "0.5",
+        "similarity": 0
+      },
+      "after": {
+        "needsReview": false,
+        "isCorrect": true,
+        "correctAnswer": "1/2",
+        "explanation": "",
+        "userAnswer": "0.5",
+        "similarity": 1
+      }
+    },
+    {
+      "id": "D02",
+      "name": "主观题绕过步骤复核",
+      "q": {
+        "type": "subjective",
+        "answer": "同类项系数相加，得到5x。"
+      },
+      "a": "同类项系数相加，得到5x。",
+      "before": {
+        "isCorrect": true,
+        "correctAnswer": "同类项系数相加，得到5x。",
+        "explanation": "",
+        "userAnswer": "同类项系数相加，得到5x。",
+        "similarity": 1
+      },
+      "after": {
+        "isCorrect": null,
+        "needsReview": true,
+        "correctAnswer": "同类项系数相加，得到5x。",
+        "explanation": "",
+        "userAnswer": "同类项系数相加，得到5x。",
+        "suggestedCorrect": true,
+        "similarity": null
+      }
+    }
+  ]
+}
